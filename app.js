@@ -1,4 +1,4 @@
-const D=window.NEMS_DATA;
+window.NEMS_READY.then(D=>{
 const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
 const norm=s=>(s??'').toString().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/đ/g,'d');
 const esc=s=>(s??'').toString().replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
@@ -113,3 +113,5 @@ dashboard();renderEquipment();renderHistory();dueTable('inspection');dueTable('c
 let initial=new URLSearchParams(location.search).get('asset');
 if(initial)openAsset(initial);else setView((location.hash||'#dashboard').slice(1),false);
 window.onpopstate=()=>{let a=new URLSearchParams(location.search).get('asset');if(a)openAsset(a);else setView((location.hash||'#dashboard').slice(1),false)};
+
+}).catch(err=>console.error('NEMS startup failed:',err));

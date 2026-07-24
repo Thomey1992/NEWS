@@ -1,7 +1,13 @@
-NEMS Enterprise Responsive
-1) Mở index.html để xem thử.
-2) Khi đưa lên GitHub Pages, giữ nguyên 5 file: index.html, style.css, app.js, data.js, nanoco-logo.png.
-3) Lịch sử được sắp xếp theo ngày mới nhất trước.
-4) Trạng thái: có Approver = Đã duyệt; chưa có Approver = Chờ duyệt.
-5) Kiểm định dùng cột Accreditation trong dữ liệu hiện tại.
-6) File hiện tại chưa có ngày Calibration hợp lệ, nên tab Hiệu chuẩn sẽ báo chưa có dữ liệu.
+NEMS Enterprise - Excel Direct Update
+
+CẬP NHẬT HẰNG NGÀY:
+1. Tải file Excel Online về máy.
+2. Đổi tên chính xác thành: equipment.xlsx
+3. Trên GitHub repository NEWS: Add file > Upload files.
+4. Upload equipment.xlsx để thay file cũ, Commit changes.
+5. Đợi GitHub Pages cập nhật 1-2 phút, F5 website.
+
+KHÔNG cần sửa data.js.
+KHÔNG cần tạo lại QR.
+Giữ nguyên sheet: Equipment_Register và Asset_Event_Log1.
+Giữ nguyên tiêu đề/thứ tự cột theo file quản lý hiện tại.

@@ -161,7 +161,14 @@
     
   </div>
 </div>
-<script src="data.js"></script>
+<div id="loadingScreen" style="position:fixed;inset:0;background:#f7f8f5;z-index:9999;display:grid;place-items:center;font-family:Segoe UI,Arial,sans-serif">
+  <div style="text-align:center;color:#064e3b">
+    <div style="font-size:26px;font-weight:900">ĐANG TẢI DỮ LIỆU</div>
+    <div style="margin-top:10px">Loading equipment.xlsx...</div>
+  </div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="excel-loader.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

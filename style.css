@@ -34,3 +34,21 @@ body{font-size:16px}.sidebar{transform:translateX(-100%);transition:.2s}.sidebar
 @media print{
 .sidebar,.topbar,.mobile-nav,.footer,.filters,.link-btn,.qr-note{display:none!important}.main{margin:0;width:100%}.content{max-width:none;padding:0}.panel{box-shadow:none;border:0}.view{display:none!important}#qr.view:not(.hidden),#detail.view:not(.hidden){display:block!important}.qr-grid{grid-template-columns:repeat(3,1fr)}.table-wrap{overflow:visible;max-height:none}
 }
+/* Clean corporate layout */
+.title h1{display:none!important}
+.topbar{height:86px}
+.title>div{font-size:22px;font-weight:800;color:#0d3c2c}
+.title small{display:none!important}
+.sidebar-footer,.footer{display:none!important}
+.content{padding-bottom:24px}
+
+@media(max-width:860px){
+  .topbar{height:78px}
+  .mobile-nav{top:78px}
+  .title>div{font-size:14px;max-width:520px}
+}
+@media(max-width:520px){
+  .topbar{height:72px}
+  .mobile-nav{top:72px}
+  .title>div{font-size:12px;line-height:1.25;padding-left:44px;padding-right:6px}
+}

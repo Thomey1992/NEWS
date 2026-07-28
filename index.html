@@ -21,7 +21,7 @@
       <button class="nav-btn" data-view="history"><span>◷</span><b>LỊCH SỬ<small>HISTORY</small></b></button>
       <button class="nav-btn" data-view="inspection"><span>✓</span><b>KIỂM ĐỊNH<small>INSPECTION</small></b></button>
       <button class="nav-btn" data-view="calibration"><span>◎</span><b>HIỆU CHUẨN<small>CALIBRATION</small></b></button>
-      <button class="nav-btn" data-view="qr"><span>▦</span><b>QR CODE<small>QR CODE</small></b></button>
+      <button class="nav-btn" data-view="qr"><span>▦</span><b>QR CODE<small>QR CODE</small></b></button><button class="nav-btn scan-btn" id="scanQrSide"><span>▣</span><b>QUÉT QR<small>SCAN QR</small></b></button>
     </nav>
 
     
@@ -33,7 +33,7 @@
       <div class="title"><div>QUẢN LÝ THIẾT BỊ / EQUIPMENT MANAGEMENT SYSTEM</div></div>
       <div class="clock-card">
         <b id="clock">--:--:--</b>
-        <span id="today">--/--/----</span>
+        <span id="today">--/--/----</span><small id="lastDataUpdate">Dữ liệu: đang tải...</small>
       </div>
     </header>
 
@@ -43,7 +43,7 @@
       <button data-view="history">Lịch sử</button>
       <button data-view="inspection">Kiểm định</button>
       <button data-view="calibration">Hiệu chuẩn</button>
-      <button data-view="qr">QR</button>
+      <button data-view="qr">QR</button><button id="scanQrMobile">Quét QR</button>
     </div>
 
     <main class="content">
@@ -167,6 +167,8 @@
     <div style="margin-top:10px">Loading optimized JSON data...</div>
   </div>
 </div>
+<div id="qrScannerModal" class="scanner-modal hidden"><div class="scanner-card"><div class="scanner-head"><div><h2>QUÉT QR THIẾT BỊ / SCAN EQUIPMENT QR</h2><small>Đưa mã QR vào giữa khung camera</small></div><button id="closeScanner" class="scanner-close" type="button">✕</button></div><div id="qr-reader"></div><div id="scannerStatus" class="scanner-status">Sẵn sàng mở camera...</div><div class="scanner-actions"><button id="startScanner" class="primary-btn" type="button">MỞ CAMERA</button><button id="stopScanner" class="secondary-btn" type="button">DỪNG QUÉT</button></div></div></div>
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 <script src="json-loader.js"></script>
 <script src="app.js"></script>
 </body>

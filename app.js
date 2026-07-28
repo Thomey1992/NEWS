@@ -109,6 +109,17 @@ $('#copyLink').onclick=async()=>{try{await navigator.clipboard.writeText(locatio
 function clock(){let d=new Date();$('#clock').textContent=d.toLocaleTimeString('vi-VN');$('#today').textContent=d.toLocaleDateString('vi-VN')}
 setInterval(clock,1000);clock();
 
+
+function formatGenerated(value){if(!value)return'Chưa xác định';const raw=String(value).trim();const p=new Date(raw.replace(' ','T'));return !isNaN(p)?p.toLocaleString('vi-VN'):raw}
+$('#lastDataUpdate').textContent='Dữ liệu cập nhật: '+formatGenerated(D.generated);
+let html5QrCode=null,scannerRunning=false;
+function extractAssetFromScan(text){try{const u=new URL(text,location.href);const a=u.searchParams.get('asset');if(a)return a.trim()}catch(e){}return String(text||'').trim()}
+async function stopScanner(){if(html5QrCode&&scannerRunning){try{await html5QrCode.stop()}catch(e){}try{await html5QrCode.clear()}catch(e){}}scannerRunning=false;$('#scannerStatus').textContent='Đã dừng camera.'}
+async function startScanner(){const s=$('#scannerStatus');if(!window.Html5Qrcode){s.textContent='Không tải được thư viện quét QR.';return}if(scannerRunning)return;try{html5QrCode=new Html5Qrcode('qr-reader');scannerRunning=true;await html5QrCode.start({facingMode:'environment'},{fps:10,qrbox:{width:250,height:250}},async text=>{const asset=extractAssetFromScan(text);const found=D.equipment.find(e=>e.asset===asset);if(found){await stopScanner();$('#qrScannerModal').classList.add('hidden');openAsset(asset)}else{s.textContent='Không tìm thấy mã thiết bị: '+asset}},()=>{});s.textContent='Đang quét QR...'}catch(err){scannerRunning=false;s.textContent='Không mở được camera. Hãy cho phép quyền camera và dùng HTTPS.'}}
+function openScanner(){$('#qrScannerModal').classList.remove('hidden');$('#scannerStatus').textContent='Nhấn MỞ CAMERA để bắt đầu quét.'}
+async function closeScanner(){await stopScanner();$('#qrScannerModal').classList.add('hidden')}
+$('#scanQrSide').addEventListener('click',openScanner);$('#scanQrMobile').addEventListener('click',openScanner);$('#startScanner').addEventListener('click',startScanner);$('#stopScanner').addEventListener('click',stopScanner);$('#closeScanner').addEventListener('click',closeScanner);
+
 dashboard();renderEquipment();renderHistory();dueTable('inspection');dueTable('calibration');renderQR();
 let initial=new URLSearchParams(location.search).get('asset');
 if(initial)openAsset(initial);else setView((location.hash||'#dashboard').slice(1),false);

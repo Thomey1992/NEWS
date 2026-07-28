@@ -20,6 +20,9 @@ function doPost(e){
   const user=verifyUser_(req.pin);
   if(a==='save_explanation'){saveExplanation_(req.record||{},user);return json_({ok:true});}
   if(a==='save_runtime'){saveRuntime_(String(req.type||''),req.record||{},user);return json_({ok:true});}
+  if(a==='save_runtime_batch'){saveRuntimeBatch_(String(req.type||''),req.records||[],user);return json_({ok:true});}
+  if(a==='update_runtime'){updateRuntime_(String(req.type||''),req.rowId,req.record||{},user);return json_({ok:true});}
+  if(a==='delete_runtime'){deleteRuntime_(String(req.type||''),req.rowId,user);return json_({ok:true});}
   throw new Error('Action không hợp lệ.');
  }catch(err){return json_({ok:false,error:String(err.message||err)});}
 }
@@ -29,7 +32,13 @@ function sheet_(name,headers){const ss=SpreadsheetApp.getActiveSpreadsheet();if(
 function now_(){return Utilities.formatDate(new Date(),Session.getScriptTimeZone()||'Asia/Ho_Chi_Minh','yyyy-MM-dd HH:mm:ss');}
 function saveExplanation_(r,u){if(!r.asset||!r.reason||!r.plannedDate||!r.temporaryControl)throw new Error('Thiếu nội dung giải trình.');sheet_(EX_SHEET,EX_HEADERS).appendRow([now_(),r.asset,r.equipmentName||'',r.area||'',r.model||'',r.serial||'',r.reason,r.plannedDate,r.temporaryControl,u.name,u.role]);}
 function saveRuntime_(type,r,u){if(!r.recordTime)throw new Error('Thiếu thời gian ghi nhận.');if(type==='forklift'){sheet_(FORKLIFT_SHEET,FORKLIFT_HEADERS).appendRow([now_(),r.recordTime,num_(r.forklift1),num_(r.forklift2),u.name,u.role]);return;}if(type==='compressor'){sheet_(COMPRESSOR_SHEET,COMPRESSOR_HEADERS).appendRow([now_(),r.recordTime,num_(r.compressor5),num_(r.compressor6),num_(r.compressor4),u.name,u.role]);return;}throw new Error('Loại dữ liệu không hợp lệ.');}
+
+function saveRuntimeBatch_(type,records,u){if(!Array.isArray(records)||!records.length)throw new Error('Không có dữ liệu để lưu.');if(records.length>100)throw new Error('Mỗi lần chỉ nhập tối đa 100 dòng.');const sh=type==='forklift'?sheet_(FORKLIFT_SHEET,FORKLIFT_HEADERS):type==='compressor'?sheet_(COMPRESSOR_SHEET,COMPRESSOR_HEADERS):null;if(!sh)throw new Error('Loại dữ liệu không hợp lệ.');const rows=records.map(r=>{if(!r.recordTime)throw new Error('Có dòng thiếu thời gian ghi nhận.');return type==='forklift'?[now_(),r.recordTime,num_(r.forklift1),num_(r.forklift2),u.name,u.role]:[now_(),r.recordTime,num_(r.compressor5),num_(r.compressor6),num_(r.compressor4),u.name,u.role];});sh.getRange(sh.getLastRow()+1,1,rows.length,rows[0].length).setValues(rows);}
+function runtimeSheetInfo_(type){if(type==='forklift')return{sh:sheet_(FORKLIFT_SHEET,FORKLIFT_HEADERS),headers:FORKLIFT_HEADERS};if(type==='compressor')return{sh:sheet_(COMPRESSOR_SHEET,COMPRESSOR_HEADERS),headers:COMPRESSOR_HEADERS};throw new Error('Loại dữ liệu không hợp lệ.');}
+function updateRuntime_(type,rowId,r,u){const info=runtimeSheetInfo_(type),row=Number(rowId);if(!Number.isInteger(row)||row<2||row>info.sh.getLastRow())throw new Error('Không tìm thấy dòng cần sửa.');if(!r.recordTime)throw new Error('Thiếu thời gian ghi nhận.');const values=type==='forklift'?[now_(),r.recordTime,num_(r.forklift1),num_(r.forklift2),u.name,u.role]:[now_(),r.recordTime,num_(r.compressor5),num_(r.compressor6),num_(r.compressor4),u.name,u.role];info.sh.getRange(row,1,1,values.length).setValues([values]);}
+function deleteRuntime_(type,rowId,u){const info=runtimeSheetInfo_(type),row=Number(rowId);if(!Number.isInteger(row)||row<2||row>info.sh.getLastRow())throw new Error('Không tìm thấy dòng cần xóa.');info.sh.deleteRow(row);}
+
 function num_(v){const n=Number(v);if(!isFinite(n)||n<0)throw new Error('Số giờ không hợp lệ.');return n;}
 function listObjects_(sh){const lr=sh.getLastRow();if(lr<2)return[];return sh.getRange(2,1,lr-1,EX_HEADERS.length).getDisplayValues().map(r=>({timestamp:r[0],asset:r[1],equipmentName:r[2],area:r[3],model:r[4],serial:r[5],reason:r[6],plannedDate:r[7],temporaryControl:r[8],userName:r[9],userRole:r[10]}));}
-function listRuntime_(name,headers,type){const sh=sheet_(name,headers),lr=sh.getLastRow();if(lr<2)return[];return sh.getRange(2,1,lr-1,headers.length).getDisplayValues().map(r=>type==='forklift'?{timestamp:r[0],recordTime:r[1],forklift1:r[2],forklift2:r[3],userName:r[4],userRole:r[5]}:{timestamp:r[0],recordTime:r[1],compressor5:r[2],compressor6:r[3],compressor4:r[4],userName:r[5],userRole:r[6]});}
+function listRuntime_(name,headers,type){const sh=sheet_(name,headers),lr=sh.getLastRow();if(lr<2)return[];return sh.getRange(2,1,lr-1,headers.length).getDisplayValues().map((r,i)=>type==='forklift'?{rowId:i+2,timestamp:r[0],recordTime:r[1],forklift1:r[2],forklift2:r[3],userName:r[4],userRole:r[5]}:{rowId:i+2,timestamp:r[0],recordTime:r[1],compressor5:r[2],compressor6:r[3],compressor4:r[4],userName:r[5],userRole:r[6]});}
 function json_(obj){return ContentService.createTextOutput(JSON.stringify(obj)).setMimeType(ContentService.MimeType.JSON);}

@@ -24,3 +24,9 @@ LƯU Ý:
 - Không thay đổi cấu trúc Equipment_Register hay Asset_Event_Log1.
 - Giải trình và số giờ hoạt động được ghi vào các sheet Google riêng.
 - Tab Lịch sử trên web vẫn hiển thị toàn bộ Asset_Event_Log1, kể cả dòng không có mã tài sản.
+
+
+CẬP NHẬT MỚI:
+- Có thể nhập nhiều ngày/dòng cùng một lần, tối đa 100 dòng.
+- Mỗi dòng số giờ có nút Sửa và Xóa.
+- Khi cập nhật phiên bản này, phải thay Code.gs và Deploy phiên bản mới.

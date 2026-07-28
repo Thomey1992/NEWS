@@ -49,8 +49,12 @@ function dashboard(){
   renderMini('#calibrationMini',cal,'calibration');
 }
 function renderMini(sel,rows,field){
-  let a=[...rows].sort((x,y)=>(parseDate(x[field])?.getTime()||Infinity)-(parseDate(y[field])?.getTime()||Infinity)).slice(0,5);
-  $(sel).innerHTML=a.length?a.map(e=>{let s=dueStatus(e[field]);return `<div class="mini-row clickable" data-asset="${esc(e.asset)}"><div><b>${esc(e.name||e.assetName)}</b><br><span>${esc(e.asset)}</span></div><div>${fmtDate(e[field])}</div><div><span class="status ${s.c}">${s.t}</span></div></div>`}).join(''):'<div class="mini-empty">Chưa có ngày đến hạn trong dữ liệu nguồn.<br>No due date available.</div>';
+  // Dashboard chỉ hiển thị đúng các thiết bị sắp đến hạn trong 60 ngày,
+  // đồng nhất với số lượng trên KPI và không giới hạn 5 dòng.
+  let a=[...rows]
+    .filter(e=>{let n=dayDiff(e[field]);return n!==null&&n>=0&&n<=60})
+    .sort((x,y)=>(parseDate(x[field])?.getTime()||Infinity)-(parseDate(y[field])?.getTime()||Infinity));
+  $(sel).innerHTML=a.length?a.map(e=>{let s=dueStatus(e[field]);return `<div class="mini-row clickable" data-asset="${esc(e.asset)}"><div><b>${esc(e.name||e.assetName)}</b><br><span>${esc(e.asset)}</span></div><div>${fmtDate(e[field])}</div><div><span class="status ${s.c}">${s.t}</span></div></div>`}).join(''):'<div class="mini-empty">Không có thiết bị sắp đến hạn trong 60 ngày.<br>No equipment due within 60 days.</div>';
   bindAssetRows(sel);
 }
 

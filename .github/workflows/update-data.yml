@@ -14,6 +14,13 @@ on:
 permissions:
   contents: write
 
+# Chỉ cho phép 1 lần chuyển Excel -> JSON chạy tại một thời điểm.
+# Nếu upload Excel mới trong khi bản cũ đang chạy,
+# GitHub sẽ hủy bản cũ và ưu tiên dữ liệu mới nhất.
+concurrency:
+  group: nems-json-update
+  cancel-in-progress: true
+
 jobs:
   convert:
     runs-on: ubuntu-latest
@@ -21,6 +28,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -37,10 +46,17 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
           git add web-data/nems-data.json
+
           if git diff --cached --quiet; then
             echo "No JSON changes."
           else
             git commit -m "Auto update NEMS JSON"
-            git push
+
+            # Đồng bộ main mới nhất trước khi push
+            git pull --rebase origin main
+
+            # Đưa JSON mới lên main
+            git push origin HEAD:main
           fi

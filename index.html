@@ -32,6 +32,7 @@
     <header class="topbar">
       <button class="menu-btn" id="menuBtn">☰</button>
       <div class="title"><div>QUẢN LÝ THIẾT BỊ / EQUIPMENT MANAGEMENT SYSTEM</div></div>
+      <div class="language-card"><span>Ngôn ngữ</span><div id="google_translate_element"></div></div>
       <div class="clock-card">
         <b id="clock">--:--:--</b>
         <span id="today">--/--/----</span><small id="lastDataUpdate">Dữ liệu: đang tải...</small>
@@ -69,7 +70,7 @@
             <div class="panel-title green"><h2>LỊCH SỬ HOẠT ĐỘNG / HISTORY</h2><button class="link-btn" data-view="history">XEM TẤT CẢ →</button></div>
             <div class="table-wrap">
               <table>
-                <thead><tr><th>Ngày / Date ↓</th><th>Loại / Event</th><th>Nội dung / Description</th><th>Người thực hiện / Technician</th><th>Trạng thái / Status</th></tr></thead>
+                <thead><tr><th>STT</th><th>Ngày / Date ↓</th><th>Loại / Event</th><th>Nội dung / Description</th><th>Người thực hiện / Technician</th><th>Trạng thái / Status</th></tr></thead>
                 <tbody id="recentHistory"></tbody>
               </table>
             </div>
@@ -97,7 +98,7 @@
               <select id="areaFilter"><option value="">Tất cả khu vực / All areas</option></select>
             </div>
           </div>
-          <div class="table-wrap large"><table><thead><tr><th>No.</th><th>Mã tài sản</th><th>Tên thiết bị</th><th>Model</th><th>Serial</th><th>Vị trí</th><th>Lịch sử</th></tr></thead><tbody id="equipmentBody"></tbody></table></div>
+          <div class="table-wrap large"><table><thead><tr><th>STT</th><th>Mã tài sản</th><th>Tên thiết bị</th><th>Model</th><th>Serial</th><th>Vị trí</th><th>Lịch sử</th></tr></thead><tbody id="equipmentBody"></tbody></table></div>
         </section>
       </section>
 
@@ -125,8 +126,8 @@
             <article><strong id="pmDueSoon">0</strong><span>Sắp đến hạn 60 ngày</span></article>
             <article><strong id="pmNoDate">0</strong><span>Chưa có ngày gốc</span></article>
           </div>
-          <div class="hint">Ngày bảo trì tiếp theo được tính từ lần Bảo trì định kỳ gần nhất; nếu chưa có lịch sử thì dùng Ngày lắp đặt. Chu kỳ “N/A” được xem là chưa có kế hoạch.</div>
-          <div class="table-wrap large"><table><thead><tr><th>Thiết bị</th><th>Mã tài sản</th><th>Vị trí</th><th>Chu kỳ bảo dưỡng</th><th>Bảo trì gần nhất</th><th>Bảo trì tiếp theo</th><th>Trạng thái</th></tr></thead><tbody id="maintenanceBody"></tbody></table></div>
+          <div class="hint">Ngày bảo trì được quản lý theo tháng. Trong suốt tháng đến hạn, bạn có thể bảo trì vào bất kỳ ngày nào và hệ thống vẫn ghi “chưa trễ”. Chỉ khi bước sang tháng kế tiếp mới tính trễ hạn.</div>
+          <div class="table-wrap large"><table><thead><tr><th>STT</th><th>Thiết bị</th><th>Mã tài sản</th><th>Vị trí</th><th>Chu kỳ bảo dưỡng</th><th>Bảo trì gần nhất</th><th>Bảo trì tiếp theo</th><th>Trạng thái</th></tr></thead><tbody id="maintenanceBody"></tbody></table></div>
         </section>
       </section>
 
@@ -139,7 +140,7 @@
               <select id="historyStatus"><option value="">Tất cả trạng thái</option><option value="approved">Đã duyệt</option><option value="pending">Chờ duyệt</option></select>
             </div>
           </div>
-          <div class="table-wrap large"><table><thead><tr><th class="sort-date">Ngày / Date ↓</th><th>Mã tài sản</th><th>Thiết bị</th><th>Loại sự kiện</th><th>Nội dung</th><th>Người thực hiện</th><th>Trạng thái</th></tr></thead><tbody id="historyBody"></tbody></table></div>
+          <div class="table-wrap large"><table><thead><tr><th>STT</th><th class="sort-date">Ngày / Date ↓</th><th>Mã tài sản</th><th>Thiết bị</th><th>Loại sự kiện</th><th>Nội dung</th><th>Người thực hiện</th><th>Trạng thái</th></tr></thead><tbody id="historyBody"></tbody></table></div>
         </section>
       </section>
 
@@ -149,7 +150,7 @@
             <div><h2>THIẾT BỊ KIỂM ĐỊNH / INSPECTION DUE DATES</h2><small>Hiển thị hạn kiểm định và số ngày còn lại</small></div>
             <input id="inspectionSearch" class="single-search" placeholder="Tìm thiết bị...">
           </div>
-          <div class="table-wrap large"><table><thead><tr><th>Thiết bị</th><th>Mã tài sản</th><th>Vị trí</th><th>Ngày đến hạn</th><th>Còn lại</th><th>Trạng thái</th></tr></thead><tbody id="inspectionBody"></tbody></table></div>
+          <div class="table-wrap large"><table><thead><tr><th>STT</th><th>Thiết bị</th><th>Mã tài sản</th><th>Vị trí</th><th>Ngày đến hạn</th><th>Còn lại</th><th>Trạng thái</th></tr></thead><tbody id="inspectionBody"></tbody></table></div>
         </section>
       </section>
 
@@ -159,7 +160,7 @@
             <div><h2>THIẾT BỊ HIỆU CHUẨN / CALIBRATION DUE DATES</h2><small>Hiển thị hạn hiệu chuẩn và số ngày còn lại</small></div>
             <input id="calibrationSearch" class="single-search" placeholder="Tìm thiết bị...">
           </div>
-          <div class="table-wrap large"><table><thead><tr><th>Thiết bị</th><th>Mã tài sản</th><th>Vị trí</th><th>Ngày đến hạn</th><th>Còn lại</th><th>Trạng thái</th></tr></thead><tbody id="calibrationBody"></tbody></table></div>
+          <div class="table-wrap large"><table><thead><tr><th>STT</th><th>Thiết bị</th><th>Mã tài sản</th><th>Vị trí</th><th>Ngày đến hạn</th><th>Còn lại</th><th>Trạng thái</th></tr></thead><tbody id="calibrationBody"></tbody></table></div>
         </section>
       </section>
 
@@ -200,6 +201,19 @@
 </div>
 <div id="qrScannerModal" class="scanner-modal hidden"><div class="scanner-card"><div class="scanner-head"><div><h2>QUÉT QR THIẾT BỊ / SCAN EQUIPMENT QR</h2><small>Đưa mã QR vào giữa khung camera</small></div><button id="closeScanner" class="scanner-close" type="button">✕</button></div><div id="qr-reader"></div><div id="scannerStatus" class="scanner-status">Sẵn sàng mở camera...</div><div class="scanner-actions"><button id="startScanner" class="primary-btn" type="button">MỞ CAMERA</button><button id="stopScanner" class="secondary-btn" type="button">DỪNG QUÉT</button></div></div></div>
 <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<script>
+(function(){
+  const p=new URLSearchParams(location.search);
+  if(p.get('lang')==='vi'){
+    document.cookie='googtrans=/vi/vi;path=/';
+    document.cookie='googtrans=/vi/vi;path=/;domain='+location.hostname;
+  }
+})();
+function googleTranslateElementInit(){
+  new google.translate.TranslateElement({pageLanguage:'vi',includedLanguages:'',autoDisplay:false,layout:google.translate.TranslateElement.InlineLayout.SIMPLE},'google_translate_element');
+}
+</script>
+<script src="https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
 <script src="json-loader.js"></script>
 <script src="app.js"></script>
 <div id="maintModal" class="maint-modal hidden"><div class="maint-modal-card"><div class="maint-modal-head"><h2 id="maintModalTitle">NEMS</h2><button id="maintModalClose">✕</button></div><form id="maintForm" class="maint-form"></form></div></div>

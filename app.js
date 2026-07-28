@@ -49,8 +49,8 @@ function dashboard(){
   renderMini('#calibrationMini',cal,'calibration');
 }
 function renderMini(sel,rows,field){
-  let a=[...rows].sort((x,y)=>(parseDate(x[field])?.getTime()||Infinity)-(parseDate(y[field])?.getTime()||Infinity)).slice(0,5);
-  $(sel).innerHTML=a.length?a.map(e=>{let s=dueStatus(e[field]);return `<div class="mini-row clickable" data-asset="${esc(e.asset)}"><div><b>${esc(e.name||e.assetName)}</b><br><span>${esc(e.asset)}</span></div><div>${fmtDate(e[field])}</div><div><span class="status ${s.c}">${s.t}</span></div></div>`}).join(''):'<div class="mini-empty">Chưa có ngày đến hạn trong dữ liệu nguồn.<br>No due date available.</div>';
+  let a=[...rows].filter(e=>{let n=dayDiff(e[field]);return n!==null&&n>=0&&n<=60}).sort((x,y)=>parseDate(x[field])-parseDate(y[field]));
+  $(sel).innerHTML=a.length?a.map(e=>{let s=dueStatus(e[field]);return `<div class="mini-row clickable" data-asset="${esc(e.asset)}"><div><b>${esc(e.name||e.assetName)}</b><br><span>${esc(e.asset)}</span></div><div>${fmtDate(e[field])}</div><div><span class="status ${s.c}">${s.t}</span></div></div>`}).join(''):'<div class="mini-empty">Không có thiết bị đến hạn trong 60 ngày.<br>No equipment due within 60 days.</div>';
   bindAssetRows(sel);
 }
 
@@ -81,6 +81,43 @@ function dueTable(type){
  bindAssetRows('#'+type+'Body');
 }
 $('#inspectionSearch').oninput=()=>dueTable('inspection');$('#calibrationSearch').oninput=()=>dueTable('calibration');
+
+
+function isMaintenancePlanned(e){
+ const c=norm(e.maintenanceCycle||'');
+ return !!c && c!=='n/a' && c!=='na' && !c.includes('khong');
+}
+function cycleMonths(value){
+ const m=String(value||'').match(/(\d+)\s*(?:tháng|thang|month)/i);
+ return m?Number(m[1]):null;
+}
+function addMonths(date,months){
+ if(!date||!months)return null;
+ const d=new Date(date.getFullYear(),date.getMonth()+months,date.getDate());
+ return d;
+}
+function latestPmDate(asset){
+ const rows=(eventByAsset.get(asset)||[]).filter(e=>norm(e.eventType).includes('preventive maintenance')||norm(e.eventType).includes('bao tri dinh ky'));
+ return rows.map(e=>parseDate(e.date)).filter(Boolean).sort((a,b)=>b-a)[0]||null;
+}
+function pmRow(e){
+ const months=cycleMonths(e.maintenanceCycle);
+ const last=latestPmDate(e.asset);
+ const base=last||parseDate(e.installationDate);
+ const next=addMonths(base,months);
+ let cls='nodata',label='Chưa có ngày gốc';
+ if(next){let n=Math.ceil((next-new Date(new Date().setHours(0,0,0,0)))/86400000);if(n<0){cls='overdue';label=`Trễ ${Math.abs(n)} ngày`}else if(n<=60){cls='due-soon';label=`Còn ${n} ngày`}else{cls='ok';label=`Còn ${n} ngày`}}
+ return {e,last,next,cls,label};
+}
+function renderMaintenance(){
+ const all=D.equipment.filter(isMaintenancePlanned).map(pmRow);
+ const q=norm($('#maintenanceSearch')?.value||''),sf=$('#maintenanceStatus')?.value||'';
+ const rows=all.filter(r=>(!sf||r.cls===sf)&&(!q||norm([r.e.asset,r.e.name,r.e.assetName,r.e.position,r.e.maintenanceCycle].join(' ')).includes(q))).sort((a,b)=>(a.next?.getTime()||Infinity)-(b.next?.getTime()||Infinity));
+ $('#pmTotal').textContent=all.length;$('#pmOverdue').textContent=all.filter(r=>r.cls==='overdue').length;$('#pmDueSoon').textContent=all.filter(r=>r.cls==='due-soon').length;$('#pmNoDate').textContent=all.filter(r=>r.cls==='nodata').length;
+ $('#maintenanceBody').innerHTML=rows.length?rows.map(r=>`<tr class="clickable" data-asset="${esc(r.e.asset)}"><td><b>${esc(r.e.name||r.e.assetName)}</b></td><td>${esc(r.e.asset)}</td><td>${esc(r.e.position||'—')}</td><td>${esc(r.e.maintenanceCycle)}</td><td>${r.last?fmtDate(r.last.toISOString().slice(0,10)):'—'}</td><td>${r.next?fmtDate(r.next.toISOString().slice(0,10)):'—'}</td><td><span class="status ${r.cls}">${r.label}</span></td></tr>`).join(''):'<tr><td colspan="7" class="empty">Không có thiết bị phù hợp.</td></tr>';
+ bindAssetRows('#maintenanceBody');
+}
+$('#maintenanceSearch').oninput=renderMaintenance;$('#maintenanceStatus').onchange=renderMaintenance;
 
 function assetUrl(asset){let u=new URL(location.href);u.hash='';u.search='';u.searchParams.set('asset',asset);return u.toString()}
 function qrUrl(asset){return 'https://api.qrserver.com/v1/create-qr-code/?size=180x180&margin=8&data='+encodeURIComponent(assetUrl(asset))}
@@ -120,7 +157,7 @@ function openScanner(){$('#qrScannerModal').classList.remove('hidden');$('#scann
 async function closeScanner(){await stopScanner();$('#qrScannerModal').classList.add('hidden')}
 $('#scanQrSide').addEventListener('click',openScanner);$('#scanQrMobile').addEventListener('click',openScanner);$('#startScanner').addEventListener('click',startScanner);$('#stopScanner').addEventListener('click',stopScanner);$('#closeScanner').addEventListener('click',closeScanner);
 
-dashboard();renderEquipment();renderHistory();dueTable('inspection');dueTable('calibration');renderQR();
+dashboard();renderEquipment();renderMaintenance();renderHistory();dueTable('inspection');dueTable('calibration');renderQR();
 let initial=new URLSearchParams(location.search).get('asset');
 if(initial)openAsset(initial);else setView((location.hash||'#dashboard').slice(1),false);
 window.onpopstate=()=>{let a=new URLSearchParams(location.search).get('asset');if(a)openAsset(a);else setView((location.hash||'#dashboard').slice(1),false)};

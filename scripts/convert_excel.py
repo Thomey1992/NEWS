@@ -63,7 +63,13 @@ def read_rows(ws):
     headers = next(rows, None)
     if not headers:
         return []
-    return [row_dict(headers, row) for row in rows]
+    result = []
+    for row in rows:
+        item = row_dict(headers, row)
+        item["__COL_K__"] = row[10] if len(row) > 10 else ""
+        item["__HAS_DATA__"] = any(clean(v) for v in row)
+        result.append(item)
+    return result
 
 
 def main():
@@ -129,13 +135,16 @@ def main():
             "description": clean(val(r, ["Nôi dung thông tin", "Nội dung thông tin"])),
             "technician": clean(val(r, ["Người phụ trách thực hiện"])),
             "result": clean(val(r, ["Kết quả"])),
+            "columnK": clean(r.get("__COL_K__", "")),
             "downtime": clean(val(r, ["Downtime (Phút)", "Downtime"])),
             "cause": clean(val(r, ["Nguyên Nhân", "Nguyên nhân"])),
             "note": clean(val(r, ["Ghi chú"])),
             "approval": approval,
             "approver": approver if ("duyet" in norm(approval) or approver) else "",
         }
-        if e["asset"] and (e["date"] or e["eventType"] or e["description"]):
+        # Giữ toàn bộ dòng lịch sử có dữ liệu, kể cả khi chưa có mã tài sản
+        # hoặc tên thiết bị. Điều này giúp auditor xem đủ nhật ký theo ngày.
+        if r.get("__HAS_DATA__") and any([e["date"], e["asset"], e["name"], e["eventType"], e["description"], e["columnK"], e["result"], e["note"]]):
             events.append(e)
 
     payload = {

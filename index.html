@@ -148,7 +148,7 @@
               <select id="historyStatus"><option value="">Tất cả trạng thái</option><option value="approved">Đã duyệt</option><option value="pending">Chờ duyệt</option></select>
             </div>
           </div>
-          <div class="table-wrap large"><table><thead><tr><th>STT</th><th class="sort-date">Ngày / Date ↓</th><th>Mã tài sản</th><th>Khu vực</th><th>Thiết bị</th><th>Model</th><th>Serial</th><th>Loại sự kiện</th><th>Nội dung</th><th>Nguyên nhân</th><th>Kết quả / Hành động</th><th>Downtime</th><th>Ghi chú</th><th>Người thực hiện</th><th>Người duyệt</th><th>Trạng thái</th></tr></thead><tbody id="historyBody"></tbody></table></div>
+          <div class="table-wrap large"><table><thead><tr><th>STT</th><th class="sort-date">Ngày / Date ↓</th><th>Mã tài sản</th><th>Khu vực</th><th>Thiết bị</th><th>Model</th><th>Serial</th><th>Loại sự kiện</th><th>Nội dung</th><th>Nguyên nhân</th><th>Kết quả / Hành động</th><th>Cột K / Column K</th><th>Downtime</th><th>Ghi chú</th><th>Người thực hiện</th><th>Người duyệt</th><th>Trạng thái</th></tr></thead><tbody id="historyBody"></tbody></table></div>
         </section>
       </section>
 
@@ -222,6 +222,9 @@
   </div>
 </div>
 <div id="qrScannerModal" class="scanner-modal hidden"><div class="scanner-card"><div class="scanner-head"><div><h2>QUÉT QR THIẾT BỊ / SCAN EQUIPMENT QR</h2><small>Đưa mã QR vào giữa khung camera</small></div><button id="closeScanner" class="scanner-close" type="button">✕</button></div><div id="qr-reader"></div><div id="scannerStatus" class="scanner-status">Sẵn sàng mở camera...</div><div class="scanner-actions"><button id="startScanner" class="primary-btn" type="button">MỞ CAMERA</button><button id="stopScanner" class="secondary-btn" type="button">DỪNG QUÉT</button></div></div></div>
+<div id="maintModal" class="maint-modal hidden"><div class="maint-modal-card"><div class="maint-modal-head"><h2 id="maintModalTitle">NEMS</h2><button id="maintModalClose">✕</button></div><form id="maintForm" class="maint-form"></form></div></div>
+
+<div id="onlineModal" class="maint-modal hidden"><div class="maint-modal-card"><div class="maint-modal-head"><h2 id="onlineModalTitle">NEMS ONLINE</h2><button id="onlineModalClose" type="button">✕</button></div><form id="onlineForm" class="maint-form"></form></div></div>
 <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 <script>
 (function(){
@@ -241,8 +244,5 @@ function googleTranslateElementInit(){
 <script src="json-loader.js"></script>
 <script src="app.js"></script>
 <script src="nems-online.js"></script>
-<div id="maintModal" class="maint-modal hidden"><div class="maint-modal-card"><div class="maint-modal-head"><h2 id="maintModalTitle">NEMS</h2><button id="maintModalClose">✕</button></div><form id="maintForm" class="maint-form"></form></div></div>
-
-<div id="onlineModal" class="maint-modal hidden"><div class="maint-modal-card"><div class="maint-modal-head"><h2 id="onlineModalTitle">NEMS ONLINE</h2><button id="onlineModalClose" type="button">✕</button></div><form id="onlineForm" class="maint-form"></form></div></div>
 </body>
 </html>

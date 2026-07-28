@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import re
 import unicodedata
-from datetime import date, datetime
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
 from openpyxl import load_workbook
@@ -139,7 +139,7 @@ def main():
             events.append(e)
 
     payload = {
-        "generated": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "generated": datetime.now(timezone(timedelta(hours=7))).strftime("%Y-%m-%d %H:%M:%S"),
         "equipment": equipment,
         "events": events,
     }

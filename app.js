@@ -22,7 +22,8 @@ function statusHTML(e){return isApproved(e)?'<span class="status approved">Đã 
 function cleanType(t){return (t||'').replace(/[🔴🟤🟠🟣🔷🔶🟢⚪⚫🟡🟧🟦🟩]/g,'').replace(/\s+/g,' ').trim()}
 function sortedEvents(arr=D.events){return [...arr].sort((a,b)=>(parseDate(b.date)?.getTime()||0)-(parseDate(a.date)?.getTime()||0)||Number(b.id||0)-Number(a.id||0))}
 const eventByAsset=new Map();
-sortedEvents().forEach(e=>{if(!eventByAsset.has(e.asset))eventByAsset.set(e.asset,[]);eventByAsset.get(e.asset).push(e)});
+function rebuildEventIndex(){eventByAsset.clear();sortedEvents().forEach(e=>{if(!e.asset)return;if(!eventByAsset.has(e.asset))eventByAsset.set(e.asset,[]);eventByAsset.get(e.asset).push(e)})}
+rebuildEventIndex();
 
 function setView(id,push=true){
   $$('.view').forEach(v=>v.classList.add('hidden'));let target=$('#'+id);if(target)target.classList.remove('hidden');
@@ -69,7 +70,7 @@ function renderHistory(){
  let q=norm($('#historySearch').value),s=$('#historyStatus').value;
  let rows=sortedEvents().filter(e=>(!s||(s==='approved'?isApproved(e):!isApproved(e)))&&(!q||norm([e.asset,e.name,e.eventType,e.description,e.technician,e.result].join(' ')).includes(q)));
  $('#historyCount').textContent=rows.length+' bản ghi / records';
- $('#historyBody').innerHTML=rows.map((e,i)=>`<tr class="clickable" data-asset="${esc(e.asset)}"><td>${i+1}</td><td><b>${fmtDate(e.date)}</b></td><td>${esc(e.asset)}</td><td>${esc(e.name||e.assetName)}</td><td>${esc(cleanType(e.eventType))}</td><td>${esc(e.description)}</td><td>${esc(e.technician||'—')}</td><td>${statusHTML(e)}</td></tr>`).join('')||'<tr><td colspan="8" class="empty">Không có dữ liệu.</td></tr>';
+ $('#historyBody').innerHTML=rows.map((e,i)=>`<tr ${e.asset?`class="clickable" data-asset="${esc(e.asset)}"`:''}><td>${i+1}</td><td><b>${fmtDate(e.date)}</b></td><td>${esc(e.asset||'—')}</td><td>${esc(e.area||'—')}</td><td>${esc(e.name||e.assetName||'—')}</td><td>${esc(e.model||'—')}</td><td>${esc(e.serial||'—')}</td><td>${esc(cleanType(e.eventType))}</td><td class="wrap-text">${esc(e.description||'—')}</td><td class="wrap-text">${esc(e.cause||'—')}</td><td class="wrap-text">${esc(e.result||'—')}</td><td>${esc(e.downtime||'—')}</td><td class="wrap-text">${esc(e.note||'—')}</td><td>${esc(e.technician||'—')}</td><td>${esc(e.approver||'—')}</td><td>${statusHTML(e)}</td></tr>`).join('')||'<tr><td colspan="16" class="empty">Không có dữ liệu.</td></tr>';
  bindAssetRows('#historyBody');
 }
 $('#historySearch').oninput=renderHistory;$('#historyStatus').onchange=renderHistory;
@@ -133,7 +134,7 @@ function renderMaintenance(){
  const q=norm($('#maintenanceSearch')?.value||''),sf=$('#maintenanceStatus')?.value||'';
  const rows=all.filter(r=>(!sf||r.cls===sf)&&(!q||norm([r.e.asset,r.e.name,r.e.assetName,r.e.position,r.e.maintenanceCycle].join(' ')).includes(q))).sort((a,b)=>(a.next?.getTime()||Infinity)-(b.next?.getTime()||Infinity));
  $('#pmTotal').textContent=all.length;$('#pmOverdue').textContent=all.filter(r=>r.cls==='overdue').length;$('#pmDueSoon').textContent=all.filter(r=>r.cls==='due-soon').length;$('#pmNoDate').textContent=all.filter(r=>r.cls==='nodata').length;
- $('#maintenanceBody').innerHTML=rows.length?rows.map((r,i)=>`<tr class="clickable" data-asset="${esc(r.e.asset)}"><td>${i+1}</td><td><b>${esc(r.e.name||r.e.assetName)}</b></td><td>${esc(r.e.asset)}</td><td>${esc(r.e.position||'—')}</td><td>${esc(r.e.maintenanceCycle)}</td><td>${r.last?fmtDate(r.last.toISOString().slice(0,10)):'—'}</td><td>${r.next?fmtDate(r.next.toISOString().slice(0,10)):'—'}</td><td><span class="status ${r.cls}">${r.label}</span></td></tr>`).join(''):'<tr><td colspan="8" class="empty">Không có thiết bị phù hợp.</td></tr>';
+ $('#maintenanceBody').innerHTML=rows.length?rows.map((r,i)=>`<tr class="clickable" data-asset="${esc(r.e.asset)}"><td>${i+1}</td><td><b>${esc(r.e.name||r.e.assetName)}</b></td><td>${esc(r.e.asset)}</td><td>${esc(r.e.position||'—')}</td><td>${esc(r.e.maintenanceCycle)}</td><td>${r.last?fmtDate(r.last.toISOString().slice(0,10)):'—'}</td><td>${r.next?fmtDate(r.next.toISOString().slice(0,10)):'—'}</td><td><span class="status ${r.cls}">${r.label}</span></td><td>${r.cls==='overdue'?`<button class="explain-btn" data-explain="${esc(r.e.asset)}" type="button">Giải trình</button>`:'—'}</td></tr>`).join(''):'<tr><td colspan="9" class="empty">Không có thiết bị phù hợp.</td></tr>';
  bindAssetRows('#maintenanceBody');
 }
 $('#maintenanceSearch').oninput=renderMaintenance;$('#maintenanceStatus').onchange=renderMaintenance;
@@ -158,7 +159,7 @@ function openAsset(asset){
  $('#timeline').innerHTML=ev.length?ev.map(x=>`<div class="event"><h3>${fmtDate(x.date)} · ${esc(cleanType(x.eventType))} · ${statusHTML(x)}</h3><div class="meta">Phụ trách: ${esc(x.technician||'—')} · Approver: ${esc(x.approver||'Chờ duyệt')}</div>${x.description?`<p><b>Nội dung:</b> ${esc(x.description)}</p>`:''}${x.cause?`<p><b>Nguyên nhân:</b> ${esc(x.cause)}</p>`:''}${x.result?`<p><b>Kết quả:</b> ${esc(x.result)}</p>`:''}${x.note?`<p><b>Ghi chú:</b> ${esc(x.note)}</p>`:''}</div>`).join(''):'<div class="empty">Chưa có lịch sử.</div>';
  let u=new URL(location.href);u.hash='';u.searchParams.set('asset',asset);history.pushState({},'',u);setView('detail',false);
 }
-function bindAssetRows(sel){$$(sel+' [data-asset]').forEach(r=>r.onclick=()=>openAsset(r.dataset.asset))}
+function bindAssetRows(sel){$$(sel+' [data-asset]').forEach(r=>r.onclick=(ev)=>{if(ev.target.closest('button'))return;openAsset(r.dataset.asset)})}
 $('#backBtn').onclick=()=>{history.back()};$('#printDetail').onclick=()=>print();
 $('#copyLink').onclick=async()=>{try{await navigator.clipboard.writeText(location.href);$('#copyLink').textContent='Đã sao chép';setTimeout(()=>$('#copyLink').textContent='Sao chép link QR',1000)}catch{prompt('Sao chép liên kết:',location.href)}};
 
@@ -176,6 +177,8 @@ function openScanner(){$('#qrScannerModal').classList.remove('hidden');$('#scann
 async function closeScanner(){await stopScanner();$('#qrScannerModal').classList.add('hidden')}
 $('#scanQrSide').addEventListener('click',openScanner);$('#scanQrMobile').addEventListener('click',openScanner);$('#startScanner').addEventListener('click',startScanner);$('#stopScanner').addEventListener('click',stopScanner);$('#closeScanner').addEventListener('click',closeScanner);
 
+window.NEMS_SET_REMOTE_EVENTS=(rows)=>{D.events=D.events.filter(e=>!e._remote).concat((rows||[]).map(e=>({...e,_remote:true})));rebuildEventIndex();dashboard();renderMaintenance();renderHistory();};
+window.NEMS_REFRESH_VIEWS=()=>{rebuildEventIndex();dashboard();renderEquipment();renderMaintenance();renderHistory();dueTable('inspection');dueTable('calibration');renderQR();};
 dashboard();renderEquipment();renderMaintenance();renderHistory();dueTable('inspection');dueTable('calibration');renderQR();
 let initial=new URLSearchParams(location.search).get('asset');
 if(initial)openAsset(initial);else setView((location.hash||'#dashboard').slice(1),false);

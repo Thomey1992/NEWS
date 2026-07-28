@@ -19,6 +19,8 @@
       <button class="nav-btn active" data-view="dashboard"><span>⌂</span><b>TỔNG QUAN<small>DASHBOARD</small></b></button>
       <button class="nav-btn" data-view="equipment"><span>▣</span><b>THIẾT BỊ<small>EQUIPMENT</small></b></button>
       <button class="nav-btn" data-view="maintenance"><span>▤</span><b>KẾ HOẠCH BẢO TRÌ<small>MAINTENANCE</small></b></button>
+      <button class="nav-btn" data-view="forklift-runtime"><span>⇅</span><b>GIỜ XE NÂNG<small>FORKLIFT HOURS</small></b></button>
+      <button class="nav-btn" data-view="compressor-runtime"><span>◉</span><b>GIỜ MÁY NÉN KHÍ<small>COMPRESSOR HOURS</small></b></button>
       <button class="nav-btn" data-view="history"><span>◷</span><b>LỊCH SỬ<small>HISTORY</small></b></button>
       <button class="nav-btn" data-view="inspection"><span>✓</span><b>KIỂM ĐỊNH<small>INSPECTION</small></b></button>
       <button class="nav-btn" data-view="calibration"><span>◎</span><b>HIỆU CHUẨN<small>CALIBRATION</small></b></button>
@@ -43,6 +45,8 @@
       <button data-view="dashboard" class="active">Tổng quan</button>
       <button data-view="equipment">Thiết bị</button>
       <button data-view="maintenance">Bảo trì</button>
+      <button data-view="forklift-runtime">Giờ xe nâng</button>
+      <button data-view="compressor-runtime">Giờ máy nén</button>
       <button data-view="history">Lịch sử</button>
       <button data-view="inspection">Kiểm định</button>
       <button data-view="calibration">Hiệu chuẩn</button>
@@ -87,6 +91,10 @@
             <div id="calibrationMini" class="mini-list"></div>
           </section>
         </div>
+        <div class="runtime-dashboard-grid">
+          <section class="panel"><div class="panel-title gold"><h2>GIỜ HOẠT ĐỘNG XE NÂNG / FORKLIFT OPERATING HOURS</h2><button class="link-btn" data-view="forklift-runtime">XEM CHI TIẾT →</button></div><div class="chart-box"><canvas id="forkliftDashboardChart"></canvas></div></section>
+          <section class="panel"><div class="panel-title blue"><h2>GIỜ HOẠT ĐỘNG MÁY NÉN KHÍ / COMPRESSOR OPERATING HOURS</h2><button class="link-btn" data-view="compressor-runtime">XEM CHI TIẾT →</button></div><div class="chart-box"><canvas id="compressorDashboardChart"></canvas></div></section>
+        </div>
       </section>
 
       <section id="equipment" class="view hidden">
@@ -127,7 +135,7 @@
             <article><strong id="pmNoDate">0</strong><span>Chưa có ngày gốc</span></article>
           </div>
           <div class="hint">Ngày bảo trì được quản lý theo tháng. Trong suốt tháng đến hạn, bạn có thể bảo trì vào bất kỳ ngày nào và hệ thống vẫn ghi “chưa trễ”. Chỉ khi bước sang tháng kế tiếp mới tính trễ hạn.</div>
-          <div class="table-wrap large"><table><thead><tr><th>STT</th><th>Thiết bị</th><th>Mã tài sản</th><th>Vị trí</th><th>Chu kỳ bảo dưỡng</th><th>Bảo trì gần nhất</th><th>Bảo trì tiếp theo</th><th>Trạng thái</th></tr></thead><tbody id="maintenanceBody"></tbody></table></div>
+          <div class="table-wrap large"><table><thead><tr><th>STT</th><th>Thiết bị</th><th>Mã tài sản</th><th>Vị trí</th><th>Chu kỳ bảo dưỡng</th><th>Bảo trì gần nhất</th><th>Bảo trì tiếp theo</th><th>Trạng thái</th><th>Giải trình</th></tr></thead><tbody id="maintenanceBody"></tbody></table></div>
         </section>
       </section>
 
@@ -140,7 +148,7 @@
               <select id="historyStatus"><option value="">Tất cả trạng thái</option><option value="approved">Đã duyệt</option><option value="pending">Chờ duyệt</option></select>
             </div>
           </div>
-          <div class="table-wrap large"><table><thead><tr><th>STT</th><th class="sort-date">Ngày / Date ↓</th><th>Mã tài sản</th><th>Thiết bị</th><th>Loại sự kiện</th><th>Nội dung</th><th>Người thực hiện</th><th>Trạng thái</th></tr></thead><tbody id="historyBody"></tbody></table></div>
+          <div class="table-wrap large"><table><thead><tr><th>STT</th><th class="sort-date">Ngày / Date ↓</th><th>Mã tài sản</th><th>Khu vực</th><th>Thiết bị</th><th>Model</th><th>Serial</th><th>Loại sự kiện</th><th>Nội dung</th><th>Nguyên nhân</th><th>Kết quả / Hành động</th><th>Downtime</th><th>Ghi chú</th><th>Người thực hiện</th><th>Người duyệt</th><th>Trạng thái</th></tr></thead><tbody id="historyBody"></tbody></table></div>
         </section>
       </section>
 
@@ -172,6 +180,20 @@
           </div>
           <div class="qr-note">Thiết bị mới sẽ tự có link và QR khi xuất hiện trong dữ liệu. QR cũ không thay đổi nếu mã tài sản không đổi.</div>
           <div id="qrGrid" class="qr-grid"></div>
+        </section>
+      </section>
+
+      <section id="forklift-runtime" class="view hidden">
+        <section class="panel"><div class="panel-title gold responsive-head"><div><h2>SỐ GIỜ HOẠT ĐỘNG XE NÂNG / FORKLIFT OPERATING HOURS</h2><small>Dữ liệu lưu trực tiếp vào Google Sheets</small></div><button class="primary-btn runtime-add" data-runtime="forklift">＋ NHẬP SỐ GIỜ</button></div>
+          <div class="runtime-kpis" id="forkliftKpis"></div><div class="chart-box large-chart"><canvas id="forkliftChart"></canvas></div>
+          <div class="table-wrap large"><table><thead><tr><th>STT</th><th>Thời gian</th><th>2113000110-0 · Toyota 8FBR18</th><th>2113000105-0 · Toyota LWE200</th><th>Người nhập</th></tr></thead><tbody id="forkliftRuntimeBody"></tbody></table></div>
+        </section>
+      </section>
+
+      <section id="compressor-runtime" class="view hidden">
+        <section class="panel"><div class="panel-title blue responsive-head"><div><h2>SỐ GIỜ HOẠT ĐỘNG MÁY NÉN KHÍ / COMPRESSOR OPERATING HOURS</h2><small>Dữ liệu lưu trực tiếp vào Google Sheets</small></div><button class="primary-btn runtime-add" data-runtime="compressor">＋ NHẬP SỐ GIỜ</button></div>
+          <div class="runtime-kpis" id="compressorKpis"></div><div class="chart-box large-chart"><canvas id="compressorChart"></canvas></div>
+          <div class="table-wrap large"><table><thead><tr><th>STT</th><th>Thời gian</th><th>Máy nén khí 5 · DB001</th><th>Máy nén khí 6 · DB002</th><th>Máy nén khí 4 · C4HC42113</th><th>Người nhập</th></tr></thead><tbody id="compressorRuntimeBody"></tbody></table></div>
         </section>
       </section>
 
@@ -214,9 +236,13 @@ function googleTranslateElementInit(){
 }
 </script>
 <script src="https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<script src="nems-online-config.js"></script>
 <script src="json-loader.js"></script>
 <script src="app.js"></script>
+<script src="nems-online.js"></script>
 <div id="maintModal" class="maint-modal hidden"><div class="maint-modal-card"><div class="maint-modal-head"><h2 id="maintModalTitle">NEMS</h2><button id="maintModalClose">✕</button></div><form id="maintForm" class="maint-form"></form></div></div>
 
+<div id="onlineModal" class="maint-modal hidden"><div class="maint-modal-card"><div class="maint-modal-head"><h2 id="onlineModalTitle">NEMS ONLINE</h2><button id="onlineModalClose" type="button">✕</button></div><form id="onlineForm" class="maint-form"></form></div></div>
 </body>
 </html>

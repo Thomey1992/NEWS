@@ -18,6 +18,7 @@
     <nav class="side-nav">
       <button class="nav-btn active" data-view="dashboard"><span>⌂</span><b>TỔNG QUAN<small>DASHBOARD</small></b></button>
       <button class="nav-btn" data-view="equipment"><span>▣</span><b>THIẾT BỊ<small>EQUIPMENT</small></b></button>
+      <button class="nav-btn" data-view="maintenance"><span>▤</span><b>KẾ HOẠCH BẢO TRÌ<small>MAINTENANCE</small></b></button>
       <button class="nav-btn" data-view="history"><span>◷</span><b>LỊCH SỬ<small>HISTORY</small></b></button>
       <button class="nav-btn" data-view="inspection"><span>✓</span><b>KIỂM ĐỊNH<small>INSPECTION</small></b></button>
       <button class="nav-btn" data-view="calibration"><span>◎</span><b>HIỆU CHUẨN<small>CALIBRATION</small></b></button>
@@ -40,6 +41,7 @@
     <div class="mobile-nav">
       <button data-view="dashboard" class="active">Tổng quan</button>
       <button data-view="equipment">Thiết bị</button>
+      <button data-view="maintenance">Bảo trì</button>
       <button data-view="history">Lịch sử</button>
       <button data-view="inspection">Kiểm định</button>
       <button data-view="calibration">Hiệu chuẩn</button>
@@ -99,6 +101,30 @@
         </section>
       </section>
 
+      <section id="maintenance" class="view hidden">
+        <div class="maintenance-toolbar">
+          <div><h2>KẾ HOẠCH BẢO TRÌ / MAINTENANCE MANAGEMENT</h2><small>Lập kế hoạch – Work Order – Lịch sử – Phân quyền</small></div>
+          <div class="maint-user"><span id="maintUserLabel">Chưa đăng nhập</span><button id="maintLoginBtn" class="secondary-btn">ĐĂNG NHẬP</button><button id="maintLogoutBtn" class="secondary-btn hidden">ĐĂNG XUẤT</button></div>
+        </div>
+        <div class="maint-tabs">
+          <button class="maint-tab active" data-maint-tab="plans">Kế hoạch / Plans</button>
+          <button class="maint-tab" data-maint-tab="workorders">Công việc / Work Orders</button>
+          <button class="maint-tab" data-maint-tab="maint-history">Lịch sử bảo trì / History</button>
+          <button class="maint-tab admin-only hidden" data-maint-tab="users">Người dùng / Users</button>
+        </div>
+        <div id="maintKpis" class="maint-kpis"></div>
+        <section id="maint-plans" class="maint-pane">
+          <section class="panel">
+            <div class="panel-title green responsive-head"><div><h2>DANH SÁCH KẾ HOẠCH</h2><small id="planCount"></small></div><div class="filters"><input id="planSearch" placeholder="Tìm thiết bị, mã kế hoạch..."><select id="planStatusFilter"><option value="">Tất cả trạng thái</option><option value="planned">Có kế hoạch</option><option value="in-progress">Đang thực hiện</option><option value="overdue">Trễ kế hoạch</option><option value="completed">Hoàn thành</option></select><button id="newPlanBtn" class="primary-btn editor-only">+ TẠO KẾ HOẠCH</button></div></div>
+            <div class="table-wrap large"><table><thead><tr><th>Mã</th><th>Thiết bị</th><th>Kế hoạch</th><th>Thực tế</th><th>Phụ trách</th><th>Trạng thái</th><th>Thao tác</th></tr></thead><tbody id="planBody"></tbody></table></div>
+          </section>
+          <section class="panel"><div class="panel-title green"><h2>TỔNG HỢP THIẾT BỊ / EQUIPMENT PLAN STATUS</h2></div><div class="table-wrap large"><table><thead><tr><th>Thiết bị</th><th>Mã tài sản</th><th>Khu vực</th><th>Kế hoạch gần nhất</th><th>Trạng thái</th><th>Thao tác</th></tr></thead><tbody id="equipmentPlanBody"></tbody></table></div></section>
+        </section>
+        <section id="maint-workorders" class="maint-pane hidden"><section class="panel"><div class="panel-title green responsive-head"><div><h2>WORK ORDERS</h2><small id="woCount"></small></div><button id="newWoBtn" class="primary-btn editor-only">+ TẠO WORK ORDER</button></div><div class="table-wrap large"><table><thead><tr><th>WO</th><th>Kế hoạch</th><th>Thiết bị</th><th>Công việc</th><th>Người thực hiện</th><th>Tiến độ</th><th>Trạng thái</th><th>Thao tác</th></tr></thead><tbody id="woBody"></tbody></table></div></section></section>
+        <section id="maint-maint-history" class="maint-pane hidden"><section class="panel"><div class="panel-title green responsive-head"><div><h2>LỊCH SỬ BẢO TRÌ TRỰC TUYẾN</h2><small id="mhCount"></small></div><button id="newHistoryBtn" class="primary-btn editor-only">+ GHI NHẬN</button></div><div class="table-wrap large"><table><thead><tr><th>Ngày</th><th>Thiết bị</th><th>WO</th><th>Nội dung</th><th>Kết quả</th><th>Người thực hiện</th></tr></thead><tbody id="mhBody"></tbody></table></div></section></section>
+        <section id="maint-users" class="maint-pane hidden"><section class="panel"><div class="panel-title green responsive-head"><div><h2>PHÂN QUYỀN NGƯỜI DÙNG</h2><small>Admin / Technician / Viewer</small></div><button id="newUserBtn" class="primary-btn admin-only">+ NGƯỜI DÙNG</button></div><div class="table-wrap"><table><thead><tr><th>Tài khoản</th><th>Họ tên</th><th>Vai trò</th><th>Trạng thái</th><th>Thao tác</th></tr></thead><tbody id="userBody"></tbody></table></div></section></section>
+      </section>
+
       <section id="history" class="view hidden">
         <section class="panel">
           <div class="panel-title green responsive-head">
@@ -155,6 +181,10 @@
           <div class="panel-title green"><h2>LỊCH SỬ ĐÃ DUYỆT / APPROVED HISTORY</h2></div>
           <div id="timeline" class="timeline"></div>
         </section>
+        <section class="panel">
+          <div class="panel-title gold"><h2>KẾ HOẠCH & WORK ORDER BẢO TRÌ TRỰC TUYẾN</h2></div>
+          <div id="assetMaintenance" class="timeline"><div class="empty">Đăng nhập module Bảo trì để xem dữ liệu trực tuyến.</div></div>
+        </section>
       </section>
     </main>
 
@@ -171,5 +201,9 @@
 <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 <script src="json-loader.js"></script>
 <script src="app.js"></script>
+<div id="maintModal" class="maint-modal hidden"><div class="maint-modal-card"><div class="maint-modal-head"><h2 id="maintModalTitle">NEMS</h2><button id="maintModalClose">✕</button></div><form id="maintForm" class="maint-form"></form></div></div>
+<script src="maintenance-config.js"></script>
+<script src="maintenance.js"></script>
+
 </body>
 </html>

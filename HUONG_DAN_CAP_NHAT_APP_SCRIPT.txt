@@ -1,0 +1,26 @@
+NEMS MAINTENANCE API V2 - CẬP NHẬT MỘT LẦN
+
+1. Mở dự án Apps Script “NEMS Maintenance API”.
+2. Xóa toàn bộ code cũ trong Mã.gs.
+3. Mở file google-apps-script/Code.gs trong gói này, sao chép toàn bộ và dán vào Mã.gs.
+4. Nhấn Ctrl+S.
+5. Chọn hàm setupNEMS và bấm Chạy. Hệ thống sẽ tạo thêm:
+   - Work_Orders
+   - Maintenance_History
+   - Users
+   và giữ sheet Maintenance_Plan hiện tại.
+6. Tài khoản mặc định: admin / 123456. Hãy đăng nhập rồi đổi PIN bằng cách sửa người dùng admin.
+7. Bấm Triển khai > Quản lý hoạt động triển khai > biểu tượng bút chì.
+8. Chọn Phiên bản mới > Triển khai. KHÔNG tạo URL mới.
+9. Upload toàn bộ file web trong gói này lên GitHub, ghi đè file cũ.
+
+PHÂN QUYỀN
+- admin: xem, thêm, sửa, xóa, quản lý người dùng.
+- technician: xem, thêm, sửa kế hoạch/WO/lịch sử; không xóa và không quản lý user.
+- viewer: chỉ xem.
+
+LƯU Ý BẢO MẬT
+- Apps Script phải triển khai “Thực thi dưới tư cách: Tôi” và “Ai có quyền truy cập: Bất kỳ ai”.
+- PIN được lưu dưới dạng SHA-256, không lưu trực tiếp.
+- Phiên đăng nhập hết hạn sau 6 giờ.
+- Kiểm định và Hiệu chuẩn vẫn dùng Excel/JSON cũ, không ghi vào Google Sheets.

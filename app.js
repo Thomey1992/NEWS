@@ -14,7 +14,7 @@ function dayDiff(v){let d=parseDate(v);if(!d)return null;let now=new Date();now.
 function dueStatus(v){
   let n=dayDiff(v);if(n===null)return {t:'Chưa có dữ liệu',c:'nodata'};
   if(n<0)return {t:`Quá hạn ${Math.abs(n)} ngày`,c:'overdue'};
-  if(n<=30)return {t:`Còn ${n} ngày`,c:'due-soon'};
+  if(n<=60)return {t:`Còn ${n} ngày`,c:'due-soon'};
   return {t:`Còn ${n} ngày`,c:'ok'};
 }
 function isApproved(e){return !!(e.approver||'').trim()}
@@ -37,8 +37,8 @@ function dashboard(){
   const approved=D.events.filter(isApproved).length,pending=D.events.length-approved;
   const insp=D.equipment.filter(e=>parseDate(e.accreditation));
   const cal=D.equipment.filter(e=>parseDate(e.calibration));
-  const inspDue=insp.filter(e=>{let n=dayDiff(e.accreditation);return n!==null&&n>=0&&n<=30}).length;
-  const calDue=cal.filter(e=>{let n=dayDiff(e.calibration);return n!==null&&n>=0&&n<=30}).length;
+  const inspDue=insp.filter(e=>{let n=dayDiff(e.accreditation);return n!==null&&n>=0&&n<=60}).length;
+  const calDue=cal.filter(e=>{let n=dayDiff(e.calibration);return n!==null&&n>=0&&n<=60}).length;
   $('#kEquipment').textContent=D.equipment.length;$('#kApproved').textContent=approved;$('#kPending').textContent=pending;
   $('#kInspection').textContent=inspDue;$('#kCalibration').textContent=calDue;$('#dueInspection').textContent=inspDue;$('#dueCalibration').textContent=calDue;
 

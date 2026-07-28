@@ -16,3 +16,9 @@ Sau khi commit:
 - QR camera và thời gian cập nhật dữ liệu đã được tích hợp.
 
 Không cần tự sửa code hoặc kiểm tra từng dòng.
+
+
+CẬP NHẬT NGƯỠNG CẢNH BÁO
+- Kiểm định sắp đến hạn: trong 60 ngày.
+- Hiệu chuẩn sắp đến hạn: trong 60 ngày.
+- KPI và trạng thái màu vàng trên Dashboard đều dùng ngưỡng 60 ngày.

@@ -126,28 +126,43 @@ function renderMaintenance(){
  bindAssetRows('#maintenanceBody');renderAnnualPlan();
 }
 function selectedPlanYear(){return Number($('#maintenanceYear')?.value)||new Date().getFullYear()}
-function planMonthsFor(e,year){const info=maintenanceCycleInfo(e.maintenanceCycle);if(info.type!=='month'||!info.value)return[];let start=0;const installed=parseDate(e.installationDate);if(installed&&installed.getFullYear()===year)start=installed.getMonth();const out=[];for(let m=start;m<12;m+=info.value)out.push(m);return out}
+function strategyChangeEvents(asset){return (eventByAsset.get(asset)||[]).filter(e=>norm(e.eventType).includes('maintenance strategy change')||norm(e.eventType).includes('thay doi chien luoc bao tri')).map(e=>({...e,_effective:parseDate(e.effectiveDate||e.date)})).filter(e=>e._effective).sort((a,b)=>a._effective-b._effective)}
+function cycleForMonth(e,year,month){
+ const point=new Date(year,month,15),changes=strategyChangeEvents(e.asset);
+ let cycle=e.maintenanceCycle;
+ // Đi ngược lịch sử: nếu tháng đang xem nằm trước ngày hiệu lực, dùng chu kỳ cũ.
+ for(let i=changes.length-1;i>=0;i--){const c=changes[i];if(point<c._effective)cycle=c.oldCycle||cycle;else if(c.newCycle)cycle=c.newCycle}
+ return cycle;
+}
+function planMonthsForCycle(e,year,cycle){const info=maintenanceCycleInfo(cycle);if(info.type!=='month'||!info.value)return[];let start=0;const installed=parseDate(e.installationDate);if(installed&&installed.getFullYear()===year)start=installed.getMonth();const out=[];for(let m=start;m<12;m+=info.value)out.push(m);return out}
 function monthActuals(asset,year,month){return pmEvents(asset).filter(e=>{const d=parseDate(e.date);return d&&d.getFullYear()===year&&d.getMonth()===month}).map(e=>parseDate(e.date)).sort((a,b)=>a-b)}
+function hasActualInYear(e,year){return pmEvents(e.asset).some(x=>{const d=parseDate(x.date);return d&&d.getFullYear()===year})}
+function hasMonthlyPlanInYear(e,year){for(let m=0;m<12;m++){const cycle=cycleForMonth(e,year,m),info=maintenanceCycleInfo(cycle);if(info.type==='month'&&info.value&&planMonthsForCycle(e,year,cycle).includes(m))return true}return false}
+function showInAnnualPlan(e,year){return hasMonthlyPlanInYear(e,year)||hasActualInYear(e,year)}
 function annualCell(e,year,month,rowType){
- const info=maintenanceCycleInfo(e.maintenanceCycle),actuals=monthActuals(e.asset,year,month),dates=actuals.map(d=>String(d.getDate()).padStart(2,'0')).join(', ');
+ const cycle=cycleForMonth(e,year,month),info=maintenanceCycleInfo(cycle),actuals=monthActuals(e.asset,year,month),dates=actuals.map(d=>String(d.getDate()).padStart(2,'0')).join(', ');
  if(rowType==='actual')return actuals.length?`<td class="annual-done" title="Đã bảo trì: ${dates}/${month+1}/${year}">${dates}</td>`:'<td></td>';
- if(info.type==='na')return '<td class="annual-na">—</td>';
- if(info.type==='condition')return `<td class="annual-cbm">CBM${actuals.length?' ✓':''}</td>`;
- if(info.type==='hour')return `<td class="annual-special">${info.value?info.value+'h':'Giờ'}</td>`;
- if(info.type==='product')return `<td class="annual-special">${info.value?info.value.toLocaleString('vi-VN')+' SP':'SP'}</td>`;
- const planned=planMonthsFor(e,year).includes(month);if(!planned)return '<td></td>';if(actuals.length)return '<td class="annual-done">X ✓</td>';
+ // Chỉ tạo KH cho chu kỳ theo tháng. Lịch sử Actual vẫn luôn giữ lại.
+ if(info.type!=='month'||!info.value)return '<td></td>';
+ const planned=planMonthsForCycle(e,year,cycle).includes(month);if(!planned)return '<td></td>';if(actuals.length)return '<td class="annual-done">X ✓</td>';
  const now=new Date(),cellMonth=new Date(year,month,1),thisMonth=new Date(now.getFullYear(),now.getMonth(),1);
  if(cellMonth<thisMonth)return '<td class="annual-late" title="Đã qua tháng kế hoạch nhưng chưa có lịch sử PM">CHƯA BT</td>';
  if(cellMonth.getTime()===thisMonth.getTime())return '<td class="annual-current">X · ĐẾN HẠN</td>';
  return '<td class="annual-plan">X</td>';
 }
+function displayCycleForYear(e,year){
+ const values=[];for(let m=0;m<12;m++){const c=String(cycleForMonth(e,year,m)||'').trim();if(c&&!values.includes(c))values.push(c)}
+ if(values.length<=1)return values[0]||e.maintenanceCycle||'N/A';
+ return `${values[0]} → ${values[values.length-1]}`;
+}
 function renderAnnualPlan(){
  const y=selectedPlanYear(),head=$('#annualPlanHead'),body=$('#annualPlanBody');if(!head||!body)return;
  head.innerHTML=`<tr><th rowspan="2">STT<br>No.</th><th rowspan="2">TÊN MMTB / HỆ THỐNG<br>Name</th><th rowspan="2">MÃ TÀI SẢN<br>Asset</th><th rowspan="2">CHU KỲ BẢO DƯỠNG<br>Maintenance cycle</th><th colspan="24">THỜI GIAN BẢO TRÌ NĂM ${y} / MAINTENANCE PERIOD</th></tr><tr>${Array.from({length:12},(_,m)=>`<th colspan="2">${m+1}<br><small>${['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][m]}</small></th>`).join('')}</tr><tr><th colspan="4"></th>${Array.from({length:12},()=>'<th>KH<br>Plan</th><th>TH<br>Actual</th>').join('')}</tr>`;
- let n=0,lateCount=0,rows='';const groups=new Map();D.equipment.forEach(e=>{const area=e.position||e.category||'Khác';if(!groups.has(area))groups.set(area,[]);groups.get(area).push(e)});
- groups.forEach((items,area)=>{rows+=`<tr class="annual-area"><td colspan="28">${esc(area)}</td></tr>`;items.forEach(e=>{n++;const info=maintenanceCycleInfo(e.maintenanceCycle);let cells='';for(let m=0;m<12;m++){const p=annualCell(e,y,m,'plan'),a=annualCell(e,y,m,'actual');if(p.includes('annual-late'))lateCount++;cells+=p+a}rows+=`<tr><td>${n}</td><td class="annual-name"><b>${esc(e.name||e.assetName||'')}</b><small>${esc(e.model||'')}</small></td><td>${esc(e.asset||'—')}</td><td>${esc(e.maintenanceCycle||'N/A')}</td>${cells}</tr>`})});
- body.innerHTML=rows||'<tr><td colspan="28" class="empty">Không có dữ liệu.</td></tr>';
- const warn=$('#annualPlanWarning');if(warn)warn.innerHTML=lateCount?`<b>⚠ ${lateCount} ô kế hoạch đã qua tháng nhưng chưa tìm thấy lịch sử bảo trì.</b> Hãy kiểm tra hồ sơ, nhập lịch sử còn thiếu hoặc lập giải trình nếu bảo trì bị trì hoãn.`:'<b>✓ Không có ô kế hoạch quá hạn chưa thực hiện trong năm đang chọn.</b>';
+ let n=0,lateCount=0,rows='';const groups=new Map();
+ D.equipment.filter(e=>showInAnnualPlan(e,y)).forEach(e=>{const area=e.position||e.category||'Khác';if(!groups.has(area))groups.set(area,[]);groups.get(area).push(e)});
+ groups.forEach((items,area)=>{rows+=`<tr class="annual-area"><td colspan="28">${esc(area)}</td></tr>`;items.forEach(e=>{n++;let cells='';for(let m=0;m<12;m++){const p=annualCell(e,y,m,'plan'),a=annualCell(e,y,m,'actual');if(p.includes('annual-late'))lateCount++;cells+=p+a}rows+=`<tr><td>${n}</td><td class="annual-name"><b>${esc(e.name||e.assetName||'')}</b><small>${esc(e.model||'')}</small></td><td>${esc(e.asset||'—')}</td><td>${esc(displayCycleForYear(e,y))}</td>${cells}</tr>`})});
+ body.innerHTML=rows||'<tr><td colspan="28" class="empty">Không có thiết bị có kế hoạch theo tháng hoặc lịch sử bảo trì trong năm này.</td></tr>';
+ const warn=$('#annualPlanWarning');if(warn)warn.innerHTML=lateCount?`<b>⚠ ${lateCount} ô kế hoạch theo tháng đã qua hạn nhưng chưa tìm thấy lịch sử bảo trì.</b> Không tính CBM, theo giờ, theo sản phẩm và N/A. Thiết bị đã đổi chu kỳ vẫn giữ nguyên lịch sử Actual.`:'<b>✓ Không có kế hoạch PM theo tháng quá hạn chưa thực hiện trong năm đang chọn.</b> Lịch sử bảo trì của thiết bị đã đổi chu kỳ vẫn được giữ lại.';
 }
 window.NEMS_GET_EXPLANATION=asset=>latestMaintenanceExplanation(asset);
 $('#maintenanceSearch').oninput=renderMaintenance;$('#maintenanceStatus').onchange=renderMaintenance;

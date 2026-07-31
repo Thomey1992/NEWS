@@ -131,11 +131,30 @@
           <div class="maintenance-summary">
             <article><strong id="pmTotal">0</strong><span>Có chu kỳ bảo dưỡng</span></article>
             <article><strong id="pmOverdue">0</strong><span>Trễ hạn</span></article>
+            <article><strong id="pmUnexplained">0</strong><span>Trễ chưa giải trình</span></article>
+            <article><strong id="pmExplained">0</strong><span>Đã giải trình</span></article>
             <article><strong id="pmDueSoon">0</strong><span>Sắp đến hạn 60 ngày</span></article>
             <article><strong id="pmNoDate">0</strong><span>Chưa có ngày gốc</span></article>
           </div>
           <div class="hint">Ngày bảo trì được quản lý theo tháng. Trong suốt tháng đến hạn, bạn có thể bảo trì vào bất kỳ ngày nào và hệ thống vẫn ghi “chưa trễ”. Chỉ khi bước sang tháng kế tiếp mới tính trễ hạn.</div>
           <div class="table-wrap large"><table><thead><tr><th>STT</th><th>Thiết bị</th><th>Mã tài sản</th><th>Vị trí</th><th>Chu kỳ bảo dưỡng</th><th>Bảo trì gần nhất</th><th>Bảo trì tiếp theo</th><th>Trạng thái</th><th>Giải trình</th></tr></thead><tbody id="maintenanceBody"></tbody></table></div>
+
+          <section class="annual-plan-card" id="annualPlanPrint">
+            <div class="annual-plan-head">
+              <div><h2>KẾ HOẠCH BẢO TRÌ MÁY MÓC THIẾT BỊ / MAINTENANCE PLAN</h2><small>Lịch sử PM trong Asset_Event_Log1 tự động điền vào dòng Thực hiện / Actual</small></div>
+              <div class="annual-plan-actions no-print">
+                <label>Năm / Year <select id="maintenanceYear"></select></label>
+                <button id="strategyChangeBtn" class="secondary-btn" type="button">GHI NHẬN CHUYỂN ĐỔI</button>
+                <button id="printMaintenancePlan" class="primary-btn" type="button">IN / LƯU PDF</button>
+              </div>
+            </div>
+            <div class="audit-transition-note">
+              <b>Quy tắc chuyển đổi phục vụ audit:</b> Không xóa kế hoạch cũ. Thiết bị chuyển từ chu kỳ tháng sang <b>Bảo trì theo điều kiện</b> phải có bản ghi ngày hiệu lực, lý do, đánh giá rủi ro, biện pháp kiểm soát và người phê duyệt. Từ ngày hiệu lực, hệ thống không tạo lịch tháng mới nhưng vẫn giữ toàn bộ lịch sử trước đó.
+            </div>
+            <div id="annualPlanWarning" class="annual-warning"></div>
+            <div class="table-wrap annual-plan-wrap"><table class="annual-plan-table"><thead id="annualPlanHead"></thead><tbody id="annualPlanBody"></tbody></table></div>
+            <div class="annual-plan-legend"><span><i class="lg plan"></i>Kế hoạch</span><span><i class="lg done"></i>Đã thực hiện</span><span><i class="lg late"></i>Chưa bảo trì</span><span><i class="lg current"></i>Đến hạn trong tháng</span><span><i class="lg cbm"></i>Bảo trì theo điều kiện</span></div>
+          </section>
         </section>
       </section>
 

@@ -84,61 +84,75 @@ function dueTable(type){
 $('#inspectionSearch').oninput=()=>dueTable('inspection');$('#calibrationSearch').oninput=()=>dueTable('calibration');
 
 
-function isMaintenancePlanned(e){
- const c=norm(e.maintenanceCycle||'');
- return !!c && c!=='n/a' && c!=='na' && !c.includes('khong');
+function maintenanceCycleInfo(value){
+ const raw=String(value||'').trim(),c=norm(raw);
+ if(!c||c==='n/a'||c==='na'||c.includes('khong ap dung'))return {type:'na',label:'N/A'};
+ if(c.includes('bao tri theo dieu kien')||c.includes('bao tri co dieu kien')||c.includes('condition-based')||c.includes('condition based')||c.includes('contdition')||c==='cbm')return {type:'condition',label:'Bảo trì theo điều kiện'};
+ let m=raw.match(/(\d+)\s*(?:tháng|thang|months?|mos?)/i);if(m)return {type:'month',value:Number(m[1]),label:`${Number(m[1])} tháng`};
+ m=raw.match(/(\d+(?:[.,]\d+)?)\s*(?:h|giờ|gio|hours?)/i);if(m)return {type:'hour',value:Number(m[1].replace(',','.')),label:`${Number(m[1].replace(',','.'))} giờ`};
+ m=raw.match(/(\d[\d.,]*)\s*(?:sản phẩm|san pham|products?|pcs)/i);if(m)return {type:'product',value:Number(m[1].replace(/[.,]/g,'')),label:`${m[1]} sản phẩm`};
+ if(c.includes('theo gio'))return {type:'hour',value:null,label:'Theo giờ'};
+ if(c.includes('theo thang'))return {type:'month',value:null,label:'Theo tháng'};
+ if(c.includes('theo san pham'))return {type:'product',value:null,label:'Theo sản phẩm'};
+ return {type:'unknown',label:raw||'Chưa xác định'};
 }
-function cycleMonths(value){
- const m=String(value||'').match(/(\d+)\s*(?:tháng|thang|month)/i);
- return m?Number(m[1]):null;
-}
-function addMonths(date,months){
- if(!date||!months)return null;
- const d=new Date(date.getFullYear(),date.getMonth()+months,date.getDate());
- return d;
-}
-function latestPmDate(asset){
- const rows=(eventByAsset.get(asset)||[]).filter(e=>norm(e.eventType).includes('preventive maintenance')||norm(e.eventType).includes('bao tri dinh ky'));
- return rows.map(e=>parseDate(e.date)).filter(Boolean).sort((a,b)=>b-a)[0]||null;
-}
+function isMaintenancePlanned(e){return maintenanceCycleInfo(e.maintenanceCycle).type!=='na'}
+function cycleMonths(value){const x=maintenanceCycleInfo(value);return x.type==='month'?x.value:null}
+function addMonths(date,months){if(!date||!months)return null;return new Date(date.getFullYear(),date.getMonth()+months,date.getDate())}
+function isPmEvent(e){const t=norm(e.eventType);return t.includes('preventive maintenance')||t.includes('bao tri dinh ky')||t==='pm'||t.includes('bao tri theo dieu kien')}
+function latestPmDate(asset){const rows=(eventByAsset.get(asset)||[]).filter(isPmEvent);return rows.map(e=>parseDate(e.date)).filter(Boolean).sort((a,b)=>b-a)[0]||null}
+function pmEvents(asset){return (eventByAsset.get(asset)||[]).filter(isPmEvent).filter(e=>parseDate(e.date))}
 function pmRow(e){
- const months=cycleMonths(e.maintenanceCycle);
- const last=latestPmDate(e.asset);
- const base=last||parseDate(e.installationDate);
- const next=addMonths(base,months);
- let cls='nodata',label='Chưa có ngày gốc';
- if(next){
-   const now=new Date();now.setHours(0,0,0,0);
-   const currentMonth=new Date(now.getFullYear(),now.getMonth(),1);
-   const dueMonth=new Date(next.getFullYear(),next.getMonth(),1);
-   const monthGap=(dueMonth.getFullYear()-currentMonth.getFullYear())*12+(dueMonth.getMonth()-currentMonth.getMonth());
-   const n=Math.ceil((next-now)/86400000);
-   if(monthGap<0){
-     cls='overdue';
-     label=`Trễ ${Math.abs(monthGap)} tháng`;
-   }else if(monthGap===0){
-     cls='due-soon';
-     label='Trong tháng này – chưa trễ';
-   }else if(n<=60){
-     cls='due-soon';
-     label=`Còn ${n} ngày`;
-   }else{
-     cls='ok';
-     label=`Còn ${n} ngày`;
-   }
+ const info=maintenanceCycleInfo(e.maintenanceCycle),last=latestPmDate(e.asset),base=last||parseDate(e.installationDate);
+ let next=null,cls='nodata',label='Chưa có ngày gốc';
+ if(info.type==='condition'){cls='condition';label='Theo điều kiện'}
+ else if(info.type==='hour'){cls='runtime';label=info.value?`Mỗi ${info.value} giờ`:'Theo giờ'}
+ else if(info.type==='product'){cls='production';label=info.value?`Mỗi ${info.value.toLocaleString('vi-VN')} SP`:'Theo sản phẩm'}
+ else if(info.type==='unknown'){cls='nodata';label='Chưa nhận dạng chu kỳ'}
+ else if(info.type==='month'&&info.value){
+  next=addMonths(base,info.value);
+  if(next){const now=new Date();now.setHours(0,0,0,0);const currentMonth=new Date(now.getFullYear(),now.getMonth(),1),dueMonth=new Date(next.getFullYear(),next.getMonth(),1);const monthGap=(dueMonth.getFullYear()-currentMonth.getFullYear())*12+(dueMonth.getMonth()-currentMonth.getMonth()),n=Math.ceil((next-now)/86400000);if(monthGap<0){cls='overdue';label=`Trễ ${Math.abs(monthGap)} tháng`}else if(monthGap===0){cls='due-soon';label='Trong tháng này – chưa trễ'}else if(n<=60){cls='due-soon';label=`Còn ${n} ngày`}else{cls='ok';label=`Còn ${n} ngày`}}
  }
- return {e,last,next,cls,label};
+ return {e,last,next,cls,label,info};
 }
+function latestMaintenanceExplanation(asset){return (eventByAsset.get(asset)||[]).find(e=>norm(e.eventType).includes('pm explanation')||norm(e.eventType).includes('giai trinh bao tri'))||null}
+function explanationCell(r){if(r.cls!=='overdue')return '—';const ex=latestMaintenanceExplanation(r.e.asset);if(!ex)return `<div class="explanation-box missing"><span class="explanation-state">Chưa giải trình</span><button class="explain-btn" data-explain="${esc(r.e.asset)}" type="button">Nhập giải trình</button></div>`;const planned=ex.plannedDate||'—';return `<div class="explanation-box done"><span class="explanation-state">Đã giải trình</span><small>Dự kiến PM: ${esc(fmtDate(planned))}</small><div class="explanation-actions"><button class="secondary-btn mini" data-explanation-view="${esc(r.e.asset)}" type="button">Xem</button><button class="explain-btn mini" data-explain="${esc(r.e.asset)}" type="button">Cập nhật</button></div></div>`}
 function renderMaintenance(){
- const all=D.equipment.filter(isMaintenancePlanned).map(pmRow);
- const q=norm($('#maintenanceSearch')?.value||''),sf=$('#maintenanceStatus')?.value||'';
+ const all=D.equipment.filter(isMaintenancePlanned).map(pmRow),q=norm($('#maintenanceSearch')?.value||''),sf=$('#maintenanceStatus')?.value||'';
  const rows=all.filter(r=>(!sf||r.cls===sf)&&(!q||norm([r.e.asset,r.e.name,r.e.assetName,r.e.position,r.e.maintenanceCycle].join(' ')).includes(q))).sort((a,b)=>(a.next?.getTime()||Infinity)-(b.next?.getTime()||Infinity));
- $('#pmTotal').textContent=all.length;$('#pmOverdue').textContent=all.filter(r=>r.cls==='overdue').length;$('#pmDueSoon').textContent=all.filter(r=>r.cls==='due-soon').length;$('#pmNoDate').textContent=all.filter(r=>r.cls==='nodata').length;
- $('#maintenanceBody').innerHTML=rows.length?rows.map((r,i)=>`<tr class="clickable" data-asset="${esc(r.e.asset)}"><td>${i+1}</td><td><b>${esc(r.e.name||r.e.assetName)}</b></td><td>${esc(r.e.asset)}</td><td>${esc(r.e.position||'—')}</td><td>${esc(r.e.maintenanceCycle)}</td><td>${r.last?fmtDate(r.last.toISOString().slice(0,10)):'—'}</td><td>${r.next?fmtDate(r.next.toISOString().slice(0,10)):'—'}</td><td><span class="status ${r.cls}">${r.label}</span></td><td>${r.cls==='overdue'?`<button class="explain-btn" data-explain="${esc(r.e.asset)}" type="button">Giải trình</button>`:'—'}</td></tr>`).join(''):'<tr><td colspan="9" class="empty">Không có thiết bị phù hợp.</td></tr>';
- bindAssetRows('#maintenanceBody');
+ const overdue=all.filter(r=>r.cls==='overdue'),explained=overdue.filter(r=>latestMaintenanceExplanation(r.e.asset)).length;
+ $('#pmTotal').textContent=all.length;$('#pmOverdue').textContent=overdue.length;$('#pmExplained').textContent=explained;$('#pmUnexplained').textContent=overdue.length-explained;$('#pmDueSoon').textContent=all.filter(r=>r.cls==='due-soon').length;$('#pmNoDate').textContent=all.filter(r=>r.cls==='nodata').length;
+ $('#maintenanceBody').innerHTML=rows.length?rows.map((r,i)=>`<tr class="clickable" data-asset="${esc(r.e.asset)}"><td>${i+1}</td><td><b>${esc(r.e.name||r.e.assetName)}</b></td><td>${esc(r.e.asset)}</td><td>${esc(r.e.position||'—')}</td><td>${esc(r.e.maintenanceCycle)}</td><td>${r.last?fmtDate(r.last.toISOString().slice(0,10)):'—'}</td><td>${r.next?fmtDate(r.next.toISOString().slice(0,10)):'—'}</td><td><span class="status ${r.cls}">${r.label}</span></td><td>${explanationCell(r)}</td></tr>`).join(''):'<tr><td colspan="9" class="empty">Không có thiết bị phù hợp.</td></tr>';
+ bindAssetRows('#maintenanceBody');renderAnnualPlan();
 }
+function selectedPlanYear(){return Number($('#maintenanceYear')?.value)||new Date().getFullYear()}
+function planMonthsFor(e,year){const info=maintenanceCycleInfo(e.maintenanceCycle);if(info.type!=='month'||!info.value)return[];let start=0;const installed=parseDate(e.installationDate);if(installed&&installed.getFullYear()===year)start=installed.getMonth();const out=[];for(let m=start;m<12;m+=info.value)out.push(m);return out}
+function monthActuals(asset,year,month){return pmEvents(asset).filter(e=>{const d=parseDate(e.date);return d&&d.getFullYear()===year&&d.getMonth()===month}).map(e=>parseDate(e.date)).sort((a,b)=>a-b)}
+function annualCell(e,year,month,rowType){
+ const info=maintenanceCycleInfo(e.maintenanceCycle),actuals=monthActuals(e.asset,year,month),dates=actuals.map(d=>String(d.getDate()).padStart(2,'0')).join(', ');
+ if(rowType==='actual')return actuals.length?`<td class="annual-done" title="Đã bảo trì: ${dates}/${month+1}/${year}">${dates}</td>`:'<td></td>';
+ if(info.type==='na')return '<td class="annual-na">—</td>';
+ if(info.type==='condition')return `<td class="annual-cbm">CBM${actuals.length?' ✓':''}</td>`;
+ if(info.type==='hour')return `<td class="annual-special">${info.value?info.value+'h':'Giờ'}</td>`;
+ if(info.type==='product')return `<td class="annual-special">${info.value?info.value.toLocaleString('vi-VN')+' SP':'SP'}</td>`;
+ const planned=planMonthsFor(e,year).includes(month);if(!planned)return '<td></td>';if(actuals.length)return '<td class="annual-done">X ✓</td>';
+ const now=new Date(),cellMonth=new Date(year,month,1),thisMonth=new Date(now.getFullYear(),now.getMonth(),1);
+ if(cellMonth<thisMonth)return '<td class="annual-late" title="Đã qua tháng kế hoạch nhưng chưa có lịch sử PM">CHƯA BT</td>';
+ if(cellMonth.getTime()===thisMonth.getTime())return '<td class="annual-current">X · ĐẾN HẠN</td>';
+ return '<td class="annual-plan">X</td>';
+}
+function renderAnnualPlan(){
+ const y=selectedPlanYear(),head=$('#annualPlanHead'),body=$('#annualPlanBody');if(!head||!body)return;
+ head.innerHTML=`<tr><th rowspan="2">STT<br>No.</th><th rowspan="2">TÊN MMTB / HỆ THỐNG<br>Name</th><th rowspan="2">MÃ TÀI SẢN<br>Asset</th><th rowspan="2">CHU KỲ BẢO DƯỠNG<br>Maintenance cycle</th><th colspan="24">THỜI GIAN BẢO TRÌ NĂM ${y} / MAINTENANCE PERIOD</th></tr><tr>${Array.from({length:12},(_,m)=>`<th colspan="2">${m+1}<br><small>${['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][m]}</small></th>`).join('')}</tr><tr><th colspan="4"></th>${Array.from({length:12},()=>'<th>KH<br>Plan</th><th>TH<br>Actual</th>').join('')}</tr>`;
+ let n=0,lateCount=0,rows='';const groups=new Map();D.equipment.forEach(e=>{const area=e.position||e.category||'Khác';if(!groups.has(area))groups.set(area,[]);groups.get(area).push(e)});
+ groups.forEach((items,area)=>{rows+=`<tr class="annual-area"><td colspan="28">${esc(area)}</td></tr>`;items.forEach(e=>{n++;const info=maintenanceCycleInfo(e.maintenanceCycle);let cells='';for(let m=0;m<12;m++){const p=annualCell(e,y,m,'plan'),a=annualCell(e,y,m,'actual');if(p.includes('annual-late'))lateCount++;cells+=p+a}rows+=`<tr><td>${n}</td><td class="annual-name"><b>${esc(e.name||e.assetName||'')}</b><small>${esc(e.model||'')}</small></td><td>${esc(e.asset||'—')}</td><td>${esc(e.maintenanceCycle||'N/A')}</td>${cells}</tr>`})});
+ body.innerHTML=rows||'<tr><td colspan="28" class="empty">Không có dữ liệu.</td></tr>';
+ const warn=$('#annualPlanWarning');if(warn)warn.innerHTML=lateCount?`<b>⚠ ${lateCount} ô kế hoạch đã qua tháng nhưng chưa tìm thấy lịch sử bảo trì.</b> Hãy kiểm tra hồ sơ, nhập lịch sử còn thiếu hoặc lập giải trình nếu bảo trì bị trì hoãn.`:'<b>✓ Không có ô kế hoạch quá hạn chưa thực hiện trong năm đang chọn.</b>';
+}
+window.NEMS_GET_EXPLANATION=asset=>latestMaintenanceExplanation(asset);
 $('#maintenanceSearch').oninput=renderMaintenance;$('#maintenanceStatus').onchange=renderMaintenance;
-
+const yearSelect=$('#maintenanceYear');if(yearSelect){const cy=new Date().getFullYear();yearSelect.innerHTML=Array.from({length:7},(_,i)=>cy-3+i).map(y=>`<option value="${y}" ${y===cy?'selected':''}>${y}</option>`).join('');yearSelect.onchange=renderAnnualPlan}
+const printPlan=$('#printMaintenancePlan');if(printPlan)printPlan.onclick=()=>{document.body.classList.add('print-maintenance-plan');window.print();setTimeout(()=>document.body.classList.remove('print-maintenance-plan'),300)};
 function assetUrl(asset){let u=new URL(location.href);u.hash='';u.search='';u.searchParams.set('asset',asset);u.searchParams.set('lang','vi');return u.toString()}
 function qrUrl(asset){return 'https://api.qrserver.com/v1/create-qr-code/?size=180x180&margin=8&data='+encodeURIComponent(assetUrl(asset))}
 function renderQR(){

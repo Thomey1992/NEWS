@@ -137,12 +137,16 @@ function cycleForMonth(e,year,month){
 function planMonthsForCycle(e,year,cycle){const info=maintenanceCycleInfo(cycle);if(info.type!=='month'||!info.value)return[];let start=0;const installed=parseDate(e.installationDate);if(installed&&installed.getFullYear()===year)start=installed.getMonth();const out=[];for(let m=start;m<12;m+=info.value)out.push(m);return out}
 function monthActuals(asset,year,month){return pmEvents(asset).filter(e=>{const d=parseDate(e.date);return d&&d.getFullYear()===year&&d.getMonth()===month}).map(e=>parseDate(e.date)).sort((a,b)=>a-b)}
 function hasActualInYear(e,year){return pmEvents(e.asset).some(x=>{const d=parseDate(x.date);return d&&d.getFullYear()===year})}
-function hasMonthlyPlanInYear(e,year){for(let m=0;m<12;m++){const cycle=cycleForMonth(e,year,m),info=maintenanceCycleInfo(cycle);if(info.type==='month'&&info.value&&planMonthsForCycle(e,year,cycle).includes(m))return true}return false}
-function showInAnnualPlan(e,year){return hasMonthlyPlanInYear(e,year)||hasActualInYear(e,year)}
+function installedByEndOfYear(e,year){const d=parseDate(e.installationDate);return !d||d.getFullYear()<=year}
+function installedByMonth(e,year,month){const d=parseDate(e.installationDate);if(!d)return true;const end=new Date(year,month+1,0,23,59,59,999);return d<=end}
+function hasMonthlyPlanInYear(e,year){if(!installedByEndOfYear(e,year))return false;for(let m=0;m<12;m++){const cycle=cycleForMonth(e,year,m),info=maintenanceCycleInfo(cycle);if(info.type==='month'&&info.value&&planMonthsForCycle(e,year,cycle).includes(m))return true}return false}
+function showInAnnualPlan(e,year){if(!installedByEndOfYear(e,year))return false;return hasMonthlyPlanInYear(e,year)||hasActualInYear(e,year)}
 function annualCell(e,year,month,rowType){
+ // Không hiển thị KH/TH ở thời điểm thiết bị chưa được lắp đặt.
+ if(!installedByMonth(e,year,month))return '<td class="annual-not-installed" title="Thiết bị chưa lắp đặt tại thời điểm này"></td>';
  const cycle=cycleForMonth(e,year,month),info=maintenanceCycleInfo(cycle),actuals=monthActuals(e.asset,year,month),dates=actuals.map(d=>String(d.getDate()).padStart(2,'0')).join(', ');
  if(rowType==='actual')return actuals.length?`<td class="annual-done" title="Đã bảo trì: ${dates}/${month+1}/${year}">${dates}</td>`:'<td></td>';
- // Chỉ tạo KH cho chu kỳ theo tháng. Lịch sử Actual vẫn luôn giữ lại.
+ // Chỉ tạo KH cho chu kỳ theo tháng. Lịch sử Actual vẫn giữ lại từ ngày thiết bị đã lắp đặt.
  if(info.type!=='month'||!info.value)return '<td></td>';
  const planned=planMonthsForCycle(e,year,cycle).includes(month);if(!planned)return '<td></td>';if(actuals.length)return '<td class="annual-done">X ✓</td>';
  const now=new Date(),cellMonth=new Date(year,month,1),thisMonth=new Date(now.getFullYear(),now.getMonth(),1);
@@ -157,11 +161,11 @@ function displayCycleForYear(e,year){
 }
 function renderAnnualPlan(){
  const y=selectedPlanYear(),head=$('#annualPlanHead'),body=$('#annualPlanBody');if(!head||!body)return;
- head.innerHTML=`<tr><th rowspan="2">STT<br>No.</th><th rowspan="2">TÊN MMTB / HỆ THỐNG<br>Name</th><th rowspan="2">MÃ TÀI SẢN<br>Asset</th><th rowspan="2">CHU KỲ BẢO DƯỠNG<br>Maintenance cycle</th><th colspan="24">THỜI GIAN BẢO TRÌ NĂM ${y} / MAINTENANCE PERIOD</th></tr><tr>${Array.from({length:12},(_,m)=>`<th colspan="2">${m+1}<br><small>${['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][m]}</small></th>`).join('')}</tr><tr><th colspan="4"></th>${Array.from({length:12},()=>'<th>KH<br>Plan</th><th>TH<br>Actual</th>').join('')}</tr>`;
+ head.innerHTML=`<tr><th rowspan="2">STT<br>No.</th><th rowspan="2">TÊN MMTB / HỆ THỐNG<br>Name</th><th rowspan="2">MÃ TÀI SẢN<br>Asset</th><th rowspan="2">NGÀY LẮP ĐẶT<br>Installation date</th><th rowspan="2">CHU KỲ BẢO DƯỠNG<br>Maintenance cycle</th><th colspan="24">THỜI GIAN BẢO TRÌ NĂM ${y} / MAINTENANCE PERIOD</th></tr><tr>${Array.from({length:12},(_,m)=>`<th colspan="2">${m+1}<br><small>${['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][m]}</small></th>`).join('')}</tr><tr><th colspan="5"></th>${Array.from({length:12},()=>'<th>KH<br>Plan</th><th>TH<br>Actual</th>').join('')}</tr>`;
  let n=0,lateCount=0,rows='';const groups=new Map();
  D.equipment.filter(e=>showInAnnualPlan(e,y)).forEach(e=>{const area=e.position||e.category||'Khác';if(!groups.has(area))groups.set(area,[]);groups.get(area).push(e)});
- groups.forEach((items,area)=>{rows+=`<tr class="annual-area"><td colspan="28">${esc(area)}</td></tr>`;items.forEach(e=>{n++;let cells='';for(let m=0;m<12;m++){const p=annualCell(e,y,m,'plan'),a=annualCell(e,y,m,'actual');if(p.includes('annual-late'))lateCount++;cells+=p+a}rows+=`<tr><td>${n}</td><td class="annual-name"><b>${esc(e.name||e.assetName||'')}</b><small>${esc(e.model||'')}</small></td><td>${esc(e.asset||'—')}</td><td>${esc(displayCycleForYear(e,y))}</td>${cells}</tr>`})});
- body.innerHTML=rows||'<tr><td colspan="28" class="empty">Không có thiết bị có kế hoạch theo tháng hoặc lịch sử bảo trì trong năm này.</td></tr>';
+ groups.forEach((items,area)=>{rows+=`<tr class="annual-area"><td colspan="29">${esc(area)}</td></tr>`;items.forEach(e=>{n++;let cells='';for(let m=0;m<12;m++){const p=annualCell(e,y,m,'plan'),a=annualCell(e,y,m,'actual');if(p.includes('annual-late'))lateCount++;cells+=p+a}rows+=`<tr><td>${n}</td><td class="annual-name"><b>${esc(e.name||e.assetName||'')}</b><small>${esc(e.model||'')}</small></td><td>${esc(e.asset||'—')}</td><td class="annual-install-date">${fmtDate(e.installationDate)}</td><td>${esc(displayCycleForYear(e,y))}</td>${cells}</tr>`})});
+ body.innerHTML=rows||'<tr><td colspan="29" class="empty">Không có thiết bị đã lắp đặt và có kế hoạch theo tháng hoặc lịch sử bảo trì trong năm này.</td></tr>';
  const warn=$('#annualPlanWarning');if(warn)warn.innerHTML=lateCount?`<b>⚠ ${lateCount} ô kế hoạch theo tháng đã qua hạn nhưng chưa tìm thấy lịch sử bảo trì.</b> Không tính CBM, theo giờ, theo sản phẩm và N/A. Thiết bị đã đổi chu kỳ vẫn giữ nguyên lịch sử Actual.`:'<b>✓ Không có kế hoạch PM theo tháng quá hạn chưa thực hiện trong năm đang chọn.</b> Lịch sử bảo trì của thiết bị đã đổi chu kỳ vẫn được giữ lại.';
 }
 window.NEMS_GET_EXPLANATION=asset=>latestMaintenanceExplanation(asset);

@@ -134,18 +134,43 @@ function cycleForMonth(e,year,month){
  for(let i=changes.length-1;i>=0;i--){const c=changes[i];if(point<c._effective)cycle=c.oldCycle||cycle;else if(c.newCycle)cycle=c.newCycle}
  return cycle;
 }
-function planMonthsForCycle(e,year,cycle){const info=maintenanceCycleInfo(cycle);if(info.type!=='month'||!info.value)return[];let start=0;const installed=parseDate(e.installationDate);if(installed&&installed.getFullYear()===year)start=installed.getMonth();const out=[];for(let m=start;m<12;m+=info.value)out.push(m);return out}
-function monthActuals(asset,year,month){return pmEvents(asset).filter(e=>{const d=parseDate(e.date);return d&&d.getFullYear()===year&&d.getMonth()===month}).map(e=>parseDate(e.date)).sort((a,b)=>a-b)}
-function hasActualInYear(e,year){return pmEvents(e.asset).some(x=>{const d=parseDate(x.date);return d&&d.getFullYear()===year})}
+// Mốc bắt đầu quản lý kế hoạch PM trên NEMS: từ tháng 10/2023.
+// Các tháng trước mốc này không tạo kế hoạch, không báo trễ và không tính Actual trên bảng kế hoạch năm.
+const PM_PLAN_START=new Date(2023,9,1);
+function monthIndex(year,month){return year*12+month}
+function isBeforePmPlanStart(year,month){return monthIndex(year,month)<monthIndex(PM_PLAN_START.getFullYear(),PM_PLAN_START.getMonth())}
+function firstEligiblePmMonth(e){
+ const installed=parseDate(e.installationDate);
+ // Máy mới lắp trong tháng không PM ngay tháng lắp đặt; kế hoạch đầu tiên bắt đầu từ tháng kế tiếp.
+ let first=installed?new Date(installed.getFullYear(),installed.getMonth()+1,1):new Date(PM_PLAN_START);
+ if(first<PM_PLAN_START)first=new Date(PM_PLAN_START);
+ return first;
+}
+function planMonthsForCycle(e,year,cycle){
+ const info=maintenanceCycleInfo(cycle);if(info.type!=='month'||!info.value)return[];
+ const first=firstEligiblePmMonth(e),anchor=monthIndex(first.getFullYear(),first.getMonth()),out=[];
+ for(let m=0;m<12;m++){const idx=monthIndex(year,m);if(idx>=anchor&&(idx-anchor)%info.value===0)out.push(m)}
+ return out;
+}
+function monthActuals(asset,year,month){
+ if(isBeforePmPlanStart(year,month))return[];
+ return pmEvents(asset).filter(e=>{const d=parseDate(e.date);return d&&d.getFullYear()===year&&d.getMonth()===month}).map(e=>parseDate(e.date)).sort((a,b)=>a-b);
+}
+function hasActualInYear(e,year){return pmEvents(e.asset).some(x=>{const d=parseDate(x.date);return d&&d.getFullYear()===year&&!isBeforePmPlanStart(d.getFullYear(),d.getMonth())})}
 function installedByEndOfYear(e,year){const d=parseDate(e.installationDate);return !d||d.getFullYear()<=year}
 function installedByMonth(e,year,month){const d=parseDate(e.installationDate);if(!d)return true;const end=new Date(year,month+1,0,23,59,59,999);return d<=end}
+function isInstallationMonth(e,year,month){const d=parseDate(e.installationDate);return !!d&&d.getFullYear()===year&&d.getMonth()===month}
 function hasMonthlyPlanInYear(e,year){if(!installedByEndOfYear(e,year))return false;for(let m=0;m<12;m++){const cycle=cycleForMonth(e,year,m),info=maintenanceCycleInfo(cycle);if(info.type==='month'&&info.value&&planMonthsForCycle(e,year,cycle).includes(m))return true}return false}
 function showInAnnualPlan(e,year){if(!installedByEndOfYear(e,year))return false;return hasMonthlyPlanInYear(e,year)||hasActualInYear(e,year)}
 function annualCell(e,year,month,rowType){
+ // NEMS chỉ bắt đầu ghi nhận kế hoạch PM từ tháng 10/2023.
+ if(isBeforePmPlanStart(year,month))return '<td class="annual-not-applicable" title="Chưa áp dụng ghi nhận kế hoạch bảo trì trước 10/2023"></td>';
  // Không hiển thị KH/TH ở thời điểm thiết bị chưa được lắp đặt.
  if(!installedByMonth(e,year,month))return '<td class="annual-not-installed" title="Thiết bị chưa lắp đặt tại thời điểm này"></td>';
  const cycle=cycleForMonth(e,year,month),info=maintenanceCycleInfo(cycle),actuals=monthActuals(e.asset,year,month),dates=actuals.map(d=>String(d.getDate()).padStart(2,'0')).join(', ');
  if(rowType==='actual')return actuals.length?`<td class="annual-done" title="Đã bảo trì: ${dates}/${month+1}/${year}">${dates}</td>`:'<td></td>';
+ // Tháng lắp đặt chỉ ghi nhận lắp đặt/commissioning, không tạo PM; lịch PM bắt đầu từ tháng kế tiếp.
+ if(isInstallationMonth(e,year,month))return '<td class="annual-install-month" title="Tháng lắp đặt - chưa yêu cầu bảo trì định kỳ"></td>';
  // Chỉ tạo KH cho chu kỳ theo tháng. Lịch sử Actual vẫn giữ lại từ ngày thiết bị đã lắp đặt.
  if(info.type!=='month'||!info.value)return '<td></td>';
  const planned=planMonthsForCycle(e,year,cycle).includes(month);if(!planned)return '<td></td>';if(actuals.length)return '<td class="annual-done">X ✓</td>';
@@ -166,7 +191,7 @@ function renderAnnualPlan(){
  D.equipment.filter(e=>showInAnnualPlan(e,y)).forEach(e=>{const area=e.position||e.category||'Khác';if(!groups.has(area))groups.set(area,[]);groups.get(area).push(e)});
  groups.forEach((items,area)=>{rows+=`<tr class="annual-area"><td colspan="29">${esc(area)}</td></tr>`;items.forEach(e=>{n++;let cells='';for(let m=0;m<12;m++){const p=annualCell(e,y,m,'plan'),a=annualCell(e,y,m,'actual');if(p.includes('annual-late'))lateCount++;cells+=p+a}rows+=`<tr><td>${n}</td><td class="annual-name"><b>${esc(e.name||e.assetName||'')}</b><small>${esc(e.model||'')}</small></td><td>${esc(e.asset||'—')}</td><td class="annual-install-date">${fmtDate(e.installationDate)}</td><td>${esc(displayCycleForYear(e,y))}</td>${cells}</tr>`})});
  body.innerHTML=rows||'<tr><td colspan="29" class="empty">Không có thiết bị đã lắp đặt và có kế hoạch theo tháng hoặc lịch sử bảo trì trong năm này.</td></tr>';
- const warn=$('#annualPlanWarning');if(warn)warn.innerHTML=lateCount?`<b>⚠ ${lateCount} ô kế hoạch theo tháng đã qua hạn nhưng chưa tìm thấy lịch sử bảo trì.</b> Không tính CBM, theo giờ, theo sản phẩm và N/A. Thiết bị đã đổi chu kỳ vẫn giữ nguyên lịch sử Actual.`:'<b>✓ Không có kế hoạch PM theo tháng quá hạn chưa thực hiện trong năm đang chọn.</b> Lịch sử bảo trì của thiết bị đã đổi chu kỳ vẫn được giữ lại.';
+ const warn=$('#annualPlanWarning');if(warn)warn.innerHTML=lateCount?`<b>⚠ ${lateCount} ô kế hoạch theo tháng đã qua hạn nhưng chưa tìm thấy lịch sử bảo trì.</b> Không tính thời gian trước 10/2023, tháng lắp đặt, CBM, theo giờ, theo sản phẩm và N/A. Thiết bị đã đổi chu kỳ vẫn giữ nguyên lịch sử Actual.`:'<b>✓ Không có kế hoạch PM theo tháng quá hạn chưa thực hiện trong năm đang chọn.</b> Không áp dụng trước 10/2023 và không tạo PM trong tháng lắp đặt; lịch sử bảo trì của thiết bị đã đổi chu kỳ vẫn được giữ lại.';
 }
 window.NEMS_GET_EXPLANATION=asset=>latestMaintenanceExplanation(asset);
 $('#maintenanceSearch').oninput=renderMaintenance;$('#maintenanceStatus').onchange=renderMaintenance;

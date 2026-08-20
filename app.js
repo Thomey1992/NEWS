@@ -226,7 +226,7 @@ setInterval(clock,1000);clock();
 
 
 function formatGenerated(value){if(!value)return'Chưa xác định';const raw=String(value).trim();const p=new Date(raw.replace(' ','T'));return !isNaN(p)?p.toLocaleString('vi-VN'):raw}
-$('#lastDataUpdate').textContent='Dữ liệu cập nhật: '+formatGenerated(D.generated);
+{const el=$('#lastDataUpdate');if(el){const source=D.sourceLabel||D.source||'Nguồn dữ liệu';const loaded=D.loadedAt||D.generated;el.textContent=`Nguồn: ${source} · Tải lúc: ${formatGenerated(loaded)}`;}}
 let html5QrCode=null,scannerRunning=false;
 function extractAssetFromScan(text){try{const u=new URL(text,location.href);const a=u.searchParams.get('asset');if(a)return a.trim()}catch(e){}return String(text||'').trim()}
 async function stopScanner(){if(html5QrCode&&scannerRunning){try{await html5QrCode.stop()}catch(e){}try{await html5QrCode.clear()}catch(e){}}scannerRunning=false;$('#scannerStatus').textContent='Đã dừng camera.'}

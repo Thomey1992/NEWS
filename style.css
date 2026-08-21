@@ -101,3 +101,45 @@ body{font-size:16px}.sidebar{transform:translateX(-100%);transition:.2s}.sidebar
  body.print-maintenance-plan .view{display:none!important}body.print-maintenance-plan #maintenance.view{display:block!important}body.print-maintenance-plan .main{margin:0!important;width:100%!important}body.print-maintenance-plan .content{padding:0!important}body.print-maintenance-plan #maintenance>.panel{border:0;box-shadow:none}body.print-maintenance-plan .annual-plan-card{margin:0;border:0;box-shadow:none}body.print-maintenance-plan .annual-plan-head{background:#fff!important;color:#000!important;padding:4px 0 8px;justify-content:center;text-align:center}body.print-maintenance-plan .audit-transition-note,body.print-maintenance-plan .annual-warning,body.print-maintenance-plan .annual-plan-legend{font-size:8px;margin:4px 0;padding:4px}body.print-maintenance-plan .annual-plan-wrap{overflow:visible!important;max-height:none!important}body.print-maintenance-plan .annual-plan-table{min-width:0;width:100%;font-size:6.5px;table-layout:fixed}body.print-maintenance-plan .annual-plan-table th,body.print-maintenance-plan .annual-plan-table td{min-width:0!important;padding:2px 1px;border:.5pt solid #333}body.print-maintenance-plan .annual-plan-table th:nth-child(2){width:13%}body.print-maintenance-plan .annual-plan-table th:nth-child(3){width:7%}body.print-maintenance-plan .annual-plan-table th:nth-child(4){width:7%}body.print-maintenance-plan .annual-plan-table th:nth-child(5){width:8%}
  @page{size:A3 landscape;margin:8mm}
 }
+
+/* 2026-08-21: freeze equipment name while scrolling annual maintenance plan horizontally */
+.annual-plan-table th:first-child,
+.annual-plan-table td:first-child{
+  width:48px;
+  min-width:48px;
+  max-width:48px;
+}
+.annual-plan-table thead th:nth-child(1){
+  position:sticky;
+  left:0;
+  z-index:18;
+  background:#dfeee5;
+}
+.annual-plan-table thead th:nth-child(2){
+  position:sticky;
+  left:48px;
+  z-index:18;
+  background:#dfeee5;
+}
+.annual-plan-table tbody tr:not(.annual-area) td:nth-child(1){
+  position:sticky;
+  left:0;
+  z-index:5;
+  background:#fff;
+}
+.annual-plan-table tbody tr:not(.annual-area) td:nth-child(2){
+  position:sticky;
+  left:48px;
+  z-index:6;
+  background:#fff;
+  box-shadow:2px 0 0 #76827b;
+}
+.annual-plan-table tbody tr:hover:not(.annual-area) td:nth-child(1),
+.annual-plan-table tbody tr:hover:not(.annual-area) td:nth-child(2){
+  background:#f8fbf9;
+}
+body.print-maintenance-plan .annual-plan-table th,
+body.print-maintenance-plan .annual-plan-table td{
+  position:static!important;
+  box-shadow:none!important;
+}

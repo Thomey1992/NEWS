@@ -21,6 +21,7 @@ const EQUIP={
  ]
 };
 let runtime={forklift:[],compressor:[]}, charts={}, activeUser=null, remoteExplanations=[], remoteStrategyChanges=[];
+window.NEMS_MANUAL_PLAN=window.NEMS_MANUAL_PLAN||{};
 function syncRemoteEvents(){window.NEMS_SET_REMOTE_EVENTS?.([...remoteExplanations,...remoteStrategyChanges])}
 function apiReady(){return API().startsWith('https://script.google.com/')}
 async function request(action,payload={}){
@@ -97,5 +98,21 @@ function renderRuntime(type){const rows=[...(runtime[type]||[])].sort((a,b)=>Str
  const latest=rows[0]||{};$('#'+type+'Kpis').innerHTML=defs.map(d=>`<article><span>${esc(d.label)}</span><strong>${latest[d.key]!==undefined?Number(latest[d.key]).toLocaleString('vi-VN',{maximumFractionDigits:1}):'—'}</strong><small>Giờ tích lũy / Total hours</small></article>`).join('');draw(type,rows.slice().reverse())}
 function draw(type,rows){if(!window.Chart)return;const defs=EQUIP[type],labels=rows.map(r=>fmtTime(r.recordTime));const datasets=defs.map(d=>({label:d.label,data:rows.map(r=>Number(r[d.key]||0)),tension:.25,pointRadius:3}));['DashboardChart','Chart'].forEach(suffix=>{const id=type+suffix,canvas=$('#'+id);if(!canvas)return;if(charts[id])charts[id].destroy();charts[id]=new Chart(canvas,{type:'line',data:{labels,datasets},options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},plugins:{legend:{position:'bottom'}},scales:{y:{title:{display:true,text:'Operating hours'}}}}})})}
 async function loadRuntime(){try{const d=await request('list_runtime');runtime.forklift=d.forklift||[];runtime.compressor=d.compressor||[];renderRuntime('forklift');renderRuntime('compressor')}catch(err){console.warn(err);renderRuntime('forklift');renderRuntime('compressor')}}
-window.NEMS_READY.then(()=>{loadExplanations();loadStrategyChanges();loadRuntime()});
+async function loadManualPlans(){
+ try{
+  const d=await request('list_manual_plans');const map={};
+  (d.records||[]).forEach(r=>{if(String(r.selected).toLowerCase()==='true'||String(r.selected)==='1'||String(r.selected).toLowerCase()==='yes')map[`${r.asset}||${r.year}||${r.month}`]=true});
+  window.NEMS_MANUAL_PLAN=map;window.NEMS_RENDER_ANNUAL_PLAN?.();
+ }catch(err){console.warn('Không tải được kế hoạch PM thủ công:',err)}
+}
+function openManualPlanLogin(cell){
+ const asset=cell.dataset.asset,year=Number(cell.dataset.year),month=Number(cell.dataset.month),selected=cell.dataset.selected==='1';
+ const e=findEquipment(asset);if(!e)return;
+ modal('THIẾT LẬP KẾ HOẠCH BẢO TRÌ',`${loginFields()}<div class="readonly-card"><b>${esc(e.name||e.assetName)}</b><span>${esc(asset)} · Tháng ${month}/${year}</span></div><div class="online-message">Chỉ Head of Engineering Department được quyền thay đổi KH. Thao tác sẽ được lưu vào Google Sheets để truy xuất.</div><div id="onlineMessage" class="online-message"></div><div class="form-actions"><button type="button" class="secondary-btn" id="onlineCancel">HỦY</button><button type="submit" class="primary-btn">${selected?'BỎ KẾ HOẠCH THÁNG NÀY':'CHỌN BẢO TRÌ THÁNG NÀY'}</button></div>`,async ev=>{
+  ev.preventDefault();const pin=$('#onlinePin').value.trim();if($('#onlineUser').value!==pin){formMsg('Người dùng và mã PIN không khớp.','error');return}
+  try{const u=localLogin(pin);if(u.role!=='Head of Engineering Department')throw new Error('Tài khoản này chỉ được xem. Chỉ Head of Engineering Department được chỉnh kế hoạch.');formMsg('Đang lưu kế hoạch...');await request('save_manual_plan',{pin,record:{asset,equipmentName:e.name||e.assetName||'',area:e.position||'',year,month,selected:!selected}});formMsg('Đã cập nhật kế hoạch bảo trì.','ok');await loadManualPlans();setTimeout(closeModal,450)}catch(err){formMsg(err.message,'error')}
+ });bindLoginDefaults();$('#onlineCancel').onclick=closeModal;
+}
+document.addEventListener('click',e=>{const c=e.target.closest('[data-plan-cell]');if(c){e.preventDefault();e.stopPropagation();openManualPlanLogin(c)}});
+window.NEMS_READY.then(()=>{loadExplanations();loadStrategyChanges();loadRuntime();loadManualPlans()});
 })();

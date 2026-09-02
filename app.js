@@ -160,8 +160,12 @@ function hasActualInYear(e,year){return pmEvents(e.asset).some(x=>{const d=parse
 function installedByEndOfYear(e,year){const d=parseDate(e.installationDate);return !d||d.getFullYear()<=year}
 function installedByMonth(e,year,month){const d=parseDate(e.installationDate);if(!d)return true;const end=new Date(year,month+1,0,23,59,59,999);return d<=end}
 function isInstallationMonth(e,year,month){const d=parseDate(e.installationDate);return !!d&&d.getFullYear()===year&&d.getMonth()===month}
-function hasMonthlyPlanInYear(e,year){if(!installedByEndOfYear(e,year))return false;for(let m=0;m<12;m++){const cycle=cycleForMonth(e,year,m),info=maintenanceCycleInfo(cycle);if(info.type==='month'&&info.value&&planMonthsForCycle(e,year,cycle).includes(m))return true}return false}
+function hasMonthlyPlanInYear(e,year){if(!installedByEndOfYear(e,year))return false;for(let m=0;m<12;m++){const cycle=cycleForMonth(e,year,m),info=maintenanceCycleInfo(cycle);if(Number(year)>=2026&&info.type==='month')return true;if(info.type==='month'&&info.value&&planMonthsForCycle(e,year,cycle).includes(m))return true}return false}
 function showInAnnualPlan(e,year){if(!installedByEndOfYear(e,year))return false;return hasMonthlyPlanInYear(e,year)||hasActualInYear(e,year)}
+const MANUAL_PLAN_START_YEAR=2026;
+function manualPlanKey(asset,year,month){return `${asset}||${year}||${month+1}`}
+function manualPlanSelected(asset,year,month){return !!(window.NEMS_MANUAL_PLAN||{})[manualPlanKey(asset,year,month)]}
+function usesManualAnnualPlan(year){return Number(year)>=MANUAL_PLAN_START_YEAR}
 function annualCell(e,year,month,rowType){
  // NEMS chỉ bắt đầu ghi nhận kế hoạch PM từ tháng 10/2023.
  if(isBeforePmPlanStart(year,month))return '<td class="annual-not-applicable" title="Chưa áp dụng ghi nhận kế hoạch bảo trì trước 10/2023"></td>';
@@ -172,8 +176,14 @@ function annualCell(e,year,month,rowType){
  // Tháng lắp đặt chỉ ghi nhận lắp đặt/commissioning, không tạo PM; lịch PM bắt đầu từ tháng kế tiếp.
  if(isInstallationMonth(e,year,month))return '<td class="annual-install-month" title="Tháng lắp đặt - chưa yêu cầu bảo trì định kỳ"></td>';
  // Chỉ tạo KH cho chu kỳ theo tháng. Lịch sử Actual vẫn giữ lại từ ngày thiết bị đã lắp đặt.
- if(info.type!=='month'||!info.value)return '<td></td>';
- const planned=planMonthsForCycle(e,year,cycle).includes(month);if(!planned)return '<td></td>';if(actuals.length)return '<td class="annual-done">X ✓</td>';
+ if(info.type!=='month'||(!usesManualAnnualPlan(year)&&!info.value))return '<td></td>';
+ const planned=usesManualAnnualPlan(year)?manualPlanSelected(e.asset,year,month):planMonthsForCycle(e,year,cycle).includes(month);
+ if(usesManualAnnualPlan(year)){
+  const cls=planned?(actuals.length?'annual-done annual-plan-editable':'annual-plan annual-plan-editable'):'annual-plan-editable annual-plan-empty';
+  const txt=planned?(actuals.length?'X ✓':'X'):'';
+  return `<td class="${cls}" data-plan-cell="1" data-asset="${esc(e.asset)}" data-year="${year}" data-month="${month+1}" data-selected="${planned?'1':'0'}" title="Nhấp để ${planned?'bỏ':'chọn'} kế hoạch bảo trì tháng ${month+1}/${year}">${txt}</td>`;
+ }
+ if(!planned)return '<td></td>';if(actuals.length)return '<td class="annual-done">X ✓</td>';
  const now=new Date(),cellMonth=new Date(year,month,1),thisMonth=new Date(now.getFullYear(),now.getMonth(),1);
  if(cellMonth<thisMonth)return '<td class="annual-late" title="Đã qua tháng kế hoạch nhưng chưa có lịch sử PM">CHƯA BT</td>';
  if(cellMonth.getTime()===thisMonth.getTime())return '<td class="annual-current">X · ĐẾN HẠN</td>';
@@ -191,11 +201,11 @@ function renderAnnualPlan(){
  D.equipment.filter(e=>showInAnnualPlan(e,y)).forEach(e=>{const area=e.position||e.category||'Khác';if(!groups.has(area))groups.set(area,[]);groups.get(area).push(e)});
  groups.forEach((items,area)=>{rows+=`<tr class="annual-area"><td colspan="29">${esc(area)}</td></tr>`;items.forEach(e=>{n++;let cells='';for(let m=0;m<12;m++){const p=annualCell(e,y,m,'plan'),a=annualCell(e,y,m,'actual');if(p.includes('annual-late'))lateCount++;cells+=p+a}rows+=`<tr><td>${n}</td><td class="annual-name"><b>${esc(e.name||e.assetName||'')}</b><small>${esc(e.model||'')}</small></td><td>${esc(e.asset||'—')}</td><td class="annual-install-date">${fmtDate(e.installationDate)}</td><td>${esc(displayCycleForYear(e,y))}</td>${cells}</tr>`})});
  body.innerHTML=rows||'<tr><td colspan="29" class="empty">Không có thiết bị đã lắp đặt và có kế hoạch theo tháng hoặc lịch sử bảo trì trong năm này.</td></tr>';
- const warn=$('#annualPlanWarning');if(warn)warn.innerHTML=lateCount?`<b>⚠ ${lateCount} ô kế hoạch theo tháng đã qua hạn nhưng chưa tìm thấy lịch sử bảo trì.</b> Không tính thời gian trước 10/2023, tháng lắp đặt, CBM, theo giờ, theo sản phẩm và N/A. Thiết bị đã đổi chu kỳ vẫn giữ nguyên lịch sử Actual.`:'<b>✓ Không có kế hoạch PM theo tháng quá hạn chưa thực hiện trong năm đang chọn.</b> Không áp dụng trước 10/2023 và không tạo PM trong tháng lắp đặt; lịch sử bảo trì của thiết bị đã đổi chu kỳ vẫn được giữ lại.';
+ const warn=$('#annualPlanWarning');if(warn)warn.innerHTML=lateCount?`<b>⚠ ${lateCount} ô kế hoạch theo tháng đã qua hạn nhưng chưa tìm thấy lịch sử bảo trì.</b> Từ năm 2026, KH được thiết lập thủ công bằng cách nhấp vào ô KH. Không tính thời gian trước 10/2023, tháng lắp đặt, CBM, theo giờ, theo sản phẩm và N/A. Thiết bị đã đổi chu kỳ vẫn giữ nguyên lịch sử Actual.`:'<b>✓ Không có kế hoạch PM theo tháng quá hạn chưa thực hiện trong năm đang chọn.</b> Từ năm 2026, KH được thiết lập thủ công bằng cách nhấp vào ô KH. Không áp dụng trước 10/2023 và không tạo PM trong tháng lắp đặt; lịch sử bảo trì của thiết bị đã đổi chu kỳ vẫn được giữ lại.';
 }
-window.NEMS_GET_EXPLANATION=asset=>latestMaintenanceExplanation(asset);
+window.NEMS_GET_EXPLANATION=asset=>latestMaintenanceExplanation(asset);window.NEMS_RENDER_ANNUAL_PLAN=renderAnnualPlan;
 $('#maintenanceSearch').oninput=renderMaintenance;$('#maintenanceStatus').onchange=renderMaintenance;
-const yearSelect=$('#maintenanceYear');if(yearSelect){const cy=new Date().getFullYear();yearSelect.innerHTML=Array.from({length:7},(_,i)=>cy-3+i).map(y=>`<option value="${y}" ${y===cy?'selected':''}>${y}</option>`).join('');yearSelect.onchange=renderAnnualPlan}
+const yearSelect=$('#maintenanceYear');if(yearSelect){const cy=new Date().getFullYear(),start=2023,end=Math.max(2035,cy+9);yearSelect.innerHTML=Array.from({length:end-start+1},(_,i)=>start+i).map(y=>`<option value="${y}" ${y===cy?'selected':''}>${y}</option>`).join('');yearSelect.onchange=renderAnnualPlan}
 const printPlan=$('#printMaintenancePlan');if(printPlan)printPlan.onclick=()=>{document.body.classList.add('print-maintenance-plan');window.print();setTimeout(()=>document.body.classList.remove('print-maintenance-plan'),300)};
 function assetUrl(asset){let u=new URL(location.href);u.hash='';u.search='';u.searchParams.set('asset',asset);u.searchParams.set('lang','vi');return u.toString()}
 function qrUrl(asset){return 'https://api.qrserver.com/v1/create-qr-code/?size=180x180&margin=8&data='+encodeURIComponent(assetUrl(asset))}

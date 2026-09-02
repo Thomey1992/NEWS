@@ -8,10 +8,12 @@ const EX_SHEET='PM_Explanation';
 const FORKLIFT_SHEET='Forklift_Runtime';
 const COMPRESSOR_SHEET='Compressor_Runtime';
 const STRATEGY_SHEET='Maintenance_Strategy_Change';
+const MANUAL_PLAN_SHEET='Maintenance_Plan_Setting';
 const EX_HEADERS=['Timestamp','EquipmentID','EquipmentName','Area','Model','Serial','Reason','Planned_PM_Date','Temporary_Control','User_Name','User_Role'];
 const FORKLIFT_HEADERS=['Timestamp','Record_Time','2113000110-0_Toyota_8FBR18','2113000105-0_Toyota_LWE200','User_Name','User_Role'];
 const COMPRESSOR_HEADERS=['Timestamp','Record_Time','Air_Compressor_5_DB001','Air_Compressor_6_DB002','Air_Compressor_4_C4HC42113','User_Name','User_Role'];
 const STRATEGY_HEADERS=['Timestamp','Effective_Date','EquipmentID','EquipmentName','Area','Old_Cycle','New_Cycle','Reason','Risk_Assessment','Temporary_Control','Approver','User_Name','User_Role'];
+const MANUAL_PLAN_HEADERS=['Timestamp','EquipmentID','EquipmentName','Area','Year','Month','Selected','User_Name','User_Role'];
 function doGet(){return json_({ok:true,message:'NEMS Online API is running'});}
 function doPost(e){
  try{
@@ -20,9 +22,11 @@ function doPost(e){
   if(a==='list_explanations')return json_({ok:true,records:listObjects_(sheet_(EX_SHEET,EX_HEADERS))});
   if(a==='list_runtime')return json_({ok:true,forklift:listRuntime_(FORKLIFT_SHEET,FORKLIFT_HEADERS,'forklift'),compressor:listRuntime_(COMPRESSOR_SHEET,COMPRESSOR_HEADERS,'compressor')});
   if(a==='list_strategy_changes')return json_({ok:true,records:listStrategyChanges_()});
+  if(a==='list_manual_plans')return json_({ok:true,records:listManualPlans_()});
   const user=verifyUser_(req.pin);
   if(a==='save_explanation'){saveExplanation_(req.record||{},user);return json_({ok:true});}
   if(a==='save_strategy_change'){saveStrategyChange_(req.record||{},user);return json_({ok:true});}
+  if(a==='save_manual_plan'){saveManualPlan_(req.record||{},user);return json_({ok:true});}
   if(a==='save_runtime'){saveRuntime_(String(req.type||''),req.record||{},user);return json_({ok:true});}
   if(a==='save_runtime_batch'){saveRuntimeBatch_(String(req.type||''),req.records||[],user);return json_({ok:true});}
   if(a==='update_runtime'){updateRuntime_(String(req.type||''),req.rowId,req.record||{},user);return json_({ok:true});}
@@ -30,7 +34,7 @@ function doPost(e){
   throw new Error('Action không hợp lệ.');
  }catch(err){return json_({ok:false,error:String(err.message||err)});}
 }
-function setupNEMSOnline(){sheet_(EX_SHEET,EX_HEADERS);sheet_(FORKLIFT_SHEET,FORKLIFT_HEADERS);sheet_(COMPRESSOR_SHEET,COMPRESSOR_HEADERS);sheet_(STRATEGY_SHEET,STRATEGY_HEADERS);return 'Đã tạo 4 sheet NEMS Online.';}
+function setupNEMSOnline(){sheet_(EX_SHEET,EX_HEADERS);sheet_(FORKLIFT_SHEET,FORKLIFT_HEADERS);sheet_(COMPRESSOR_SHEET,COMPRESSOR_HEADERS);sheet_(STRATEGY_SHEET,STRATEGY_HEADERS);sheet_(MANUAL_PLAN_SHEET,MANUAL_PLAN_HEADERS);return 'Đã tạo 5 sheet NEMS Online.';}
 function verifyUser_(pin){const u=USERS[String(pin||'')];if(!u)throw new Error('Mã PIN không đúng hoặc không có quyền.');return u;}
 function sheet_(name,headers){const ss=SpreadsheetApp.getActiveSpreadsheet();if(!ss)throw new Error('Hãy mở Apps Script từ Google Sheets.');let sh=ss.getSheetByName(name);if(!sh){sh=ss.insertSheet(name);sh.getRange(1,1,1,headers.length).setValues([headers]);sh.setFrozenRows(1);sh.getRange(1,1,1,headers.length).setFontWeight('bold').setBackground('#064e3b').setFontColor('#fff');sh.autoResizeColumns(1,headers.length);}return sh;}
 function now_(){return Utilities.formatDate(new Date(),Session.getScriptTimeZone()||'Asia/Ho_Chi_Minh','yyyy-MM-dd HH:mm:ss');}
@@ -55,4 +59,17 @@ function deleteRuntime_(type,rowId,u){const info=runtimeSheetInfo_(type),row=Num
 function num_(v){const n=Number(v);if(!isFinite(n)||n<0)throw new Error('Số giờ không hợp lệ.');return n;}
 function listObjects_(sh){const lr=sh.getLastRow();if(lr<2)return[];return sh.getRange(2,1,lr-1,EX_HEADERS.length).getDisplayValues().map(r=>({timestamp:r[0],asset:r[1],equipmentName:r[2],area:r[3],model:r[4],serial:r[5],reason:r[6],plannedDate:r[7],temporaryControl:r[8],userName:r[9],userRole:r[10]}));}
 function listRuntime_(name,headers,type){const sh=sheet_(name,headers),lr=sh.getLastRow();if(lr<2)return[];return sh.getRange(2,1,lr-1,headers.length).getDisplayValues().map((r,i)=>type==='forklift'?{rowId:i+2,timestamp:r[0],recordTime:r[1],forklift1:r[2],forklift2:r[3],userName:r[4],userRole:r[5]}:{rowId:i+2,timestamp:r[0],recordTime:r[1],compressor5:r[2],compressor6:r[3],compressor4:r[4],userName:r[5],userRole:r[6]});}
+function saveManualPlan_(r,u){
+ if(u.role!=='Head of Engineering Department')throw new Error('Chỉ Head of Engineering Department được chỉnh kế hoạch bảo trì.');
+ const year=Number(r.year),month=Number(r.month);if(!r.asset||year<2026||month<1||month>12)throw new Error('Dữ liệu kế hoạch không hợp lệ.');
+ const sh=sheet_(MANUAL_PLAN_SHEET,MANUAL_PLAN_HEADERS),lr=sh.getLastRow();
+ if(lr>=2){const vals=sh.getRange(2,1,lr-1,MANUAL_PLAN_HEADERS.length).getValues();for(let i=vals.length-1;i>=0;i--){if(String(vals[i][1])===String(r.asset)&&Number(vals[i][4])===year&&Number(vals[i][5])===month){sh.deleteRow(i+2);break;}}}
+ sh.appendRow([now_(),r.asset,r.equipmentName||'',r.area||'',year,month,!!r.selected,u.name,u.role]);
+}
+function listManualPlans_(){
+ const sh=sheet_(MANUAL_PLAN_SHEET,MANUAL_PLAN_HEADERS),lr=sh.getLastRow();if(lr<2)return[];
+ const rows=sh.getRange(2,1,lr-1,MANUAL_PLAN_HEADERS.length).getDisplayValues(),latest={};
+ rows.forEach(r=>{latest[`${r[1]}||${r[4]}||${r[5]}`]={timestamp:r[0],asset:r[1],equipmentName:r[2],area:r[3],year:r[4],month:r[5],selected:r[6],userName:r[7],userRole:r[8]}});
+ return Object.values(latest);
+}
 function json_(obj){return ContentService.createTextOutput(JSON.stringify(obj)).setMimeType(ContentService.MimeType.JSON);}
